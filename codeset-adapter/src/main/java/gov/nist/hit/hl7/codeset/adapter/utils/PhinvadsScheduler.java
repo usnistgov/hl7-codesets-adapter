@@ -159,8 +159,9 @@ public class PhinvadsScheduler {
         boolean needUpdate = false;
         if (vs != null && vsv != null) {
             if (codeset != null) {
+
                 if (codeset.getDateUpdated() != null && codeset.getDateUpdated().equals(vs.getStatusDate())
-                        && codeset.getLatestVersion().getVersion() == String.valueOf(vsv.getVersionNumber()) ) {
+                        && codeset.getLatestVersion().getVersion().equals(String.valueOf(vsv.getVersionNumber()))  ) {
                     CodesetVersion codesetVersion = mongoOps.findOne(Query.query(Criteria.where("version").is(codeset.getLatestVersion())),
                             CodesetVersion.class);
                     if(codesetVersion != null){
@@ -219,6 +220,7 @@ public class PhinvadsScheduler {
             codeset.setCodeSetVersions(new HashSet<CodesetVersion>());
 
             if (valueSetConcepts.size() > 500) {
+                System.out.println("Number of codes: " + valueSetConcepts.size() );
                 codeset.setHasPartCodes(true);
                 codesetVersion.setHasPartCodes(true);
             } else {

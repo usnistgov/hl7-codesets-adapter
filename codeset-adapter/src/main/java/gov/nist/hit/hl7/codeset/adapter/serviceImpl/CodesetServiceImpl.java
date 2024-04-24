@@ -2,6 +2,7 @@ package gov.nist.hit.hl7.codeset.adapter.serviceImpl;
 
 import gov.nist.hit.hl7.codeset.adapter.model.request.CodesetRequest;
 import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetResponse;
+import gov.nist.hit.hl7.codeset.adapter.model.response.ProvidersResponse;
 import gov.nist.hit.hl7.codeset.adapter.repository.CodesetRepository;
 import gov.nist.hit.hl7.codeset.adapter.repository.CodesetVersionRepository;
 import gov.nist.hit.hl7.codeset.adapter.model.Codeset;
@@ -35,17 +36,26 @@ public class CodesetServiceImpl implements CodesetService {
 
 
     @Override
+    public List<ProvidersResponse> getProviders() throws IOException {
+        List<ProvidersResponse> providers = new ArrayList<ProvidersResponse>();
+        providers.add(new ProvidersResponse("phinvads", "Phinvads"));
+        return providers;
+    }
+
+    @Override
     public List<CodesetResponse> getCodesets(String provider, CodesetSearchCriteria criteria) throws IOException {
         MatchOperation matchOperation = Aggregation.match(Criteria.where("provider").regex("^" + Pattern.quote(provider) + "$", "i")
         );
 
         ProjectionOperation projectionOperation = Aggregation.project()
                 .and("name").as("name")
-                .and("phinvadsOid").as("identifier")
                 .and("latestVersion").as("latestStableVersion");
-//       .and("latestVersion.version").as("latestStableVersion.version")
-//                .and("latestVersion.date").as("latestStableVersion.date")
-//                .and("latestVersion.numberOfCodes").as("latestStableVersion.numberOfCodes");
+
+        if (provider != null && provider.equalsIgnoreCase("phinvads")) {
+            projectionOperation = projectionOperation.and("phinvadsOid").as("identifier");
+        } else {
+
+        }
 
 
         // Execute the aggregation
@@ -64,9 +74,15 @@ public class CodesetServiceImpl implements CodesetService {
         MatchOperation matchOperation = Aggregation.match(criteria);
         ProjectionOperation projectionOperation = Aggregation.project()
                 .and("name").as("name")
-                .and("phinvadsOid").as("identifier")
                 .and("latestVersion").as("latestStableVersion")
                 .and("versions").as("versions");
+
+        if (provider != null && provider.equalsIgnoreCase("phinvads")) {
+            projectionOperation = projectionOperation.and("phinvadsOid").as("identifier");
+        } else {
+
+        }
+
         Aggregation aggregation = Aggregation.newAggregation(
                 matchOperation,
                 projectionOperation
@@ -120,10 +136,7 @@ public class CodesetServiceImpl implements CodesetService {
         // Unwind the resulting array to handle documents separately
         UnwindOperation unwindOperation = Aggregation.unwind("codeSetVersionsJoined");
 
-        // Match to filter the specific version "v2"
-//        MatchOperation matchVersionOperation = Aggregation.match(
-//                Criteria.where("codeSetVersionsJoined.version").is("1")
-//        );
+
         // Conditional match based on version
         MatchOperation matchVersionOperation = Aggregation.match(
                 Criteria.where("$expr").is(
@@ -157,7 +170,6 @@ public class CodesetServiceImpl implements CodesetService {
         // Projection to shape the output
         ProjectionOperation projectionOperation = Aggregation.project()
                 .and("name").as("name")
-                .and("phinvadsOid").as("identifier")
                 .and("latestVersion").as("latestStableVersion")
                 .and(context -> {
                     return new Document("$ifNull", Arrays.asList(searchCriteria.getMatch(), null));
@@ -167,6 +179,12 @@ public class CodesetServiceImpl implements CodesetService {
                         "value: '$$code.value', displayText: '$$code.description', codeSystem: '$$code.codeSystem' } } }"
                 ).as("codes")
                 .and(filterExpression).as("codes");
+
+        if (provider != null && provider.equalsIgnoreCase("phinvads")) {
+            projectionOperation = projectionOperation.and("phinvadsOid").as("identifier");
+        } else {
+
+        }
 
         Aggregation aggregation = Aggregation.newAggregation(
                 Aggregation.match(criteria),
