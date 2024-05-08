@@ -5,22 +5,15 @@ import gov.nist.hit.hl7.codeset.adapter.model.VersionMetadata;
 
 import java.util.List;
 
-public class CodesetResponse {
+public class CodesetMetadataResponse {
     private String identifier;
-
     private String name;
     private VersionMetadata latestStableVersion;
     private List<VersionMetadata> versions;
-    private List<CodeResponse> codes;
-    private String codeMatchValue;
-    private VersionDetails version;
 
 
-    public Boolean getLatestStable() {
-        return version.getVersion().equals(latestStableVersion.getVersion());
-    }
 
-    public CodesetResponse() {
+    public CodesetMetadataResponse() {
     }
 
     public String getId() {
@@ -55,27 +48,4 @@ public class CodesetResponse {
         this.versions = versions;
     }
 
-    public List<CodeResponse> getCodes() {
-        return codes;
-    }
-
-    public void setCodes(List<CodeResponse> codes) {
-        this.codes = codes;
-    }
-
-    public String getCodeMatchValue() {
-        return codeMatchValue;
-    }
-
-    public void setCodeMatchValue(String codeMatchValue) {
-        this.codeMatchValue = codeMatchValue;
-    }
-
-    public VersionDetails getVersion() {
-        return version;
-    }
-
-    public void setVersion(VersionDetails version) {
-        this.version = version;
-    }
 }

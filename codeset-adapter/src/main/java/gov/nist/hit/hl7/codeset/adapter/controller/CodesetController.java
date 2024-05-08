@@ -3,6 +3,7 @@ package gov.nist.hit.hl7.codeset.adapter.controller;
 import gov.nist.hit.hl7.codeset.adapter.model.Codeset;
 import gov.nist.hit.hl7.codeset.adapter.model.request.CodesetRequest;
 import gov.nist.hit.hl7.codeset.adapter.model.request.CodesetSearchCriteria;
+import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetMetadataResponse;
 import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetResponse;
 import gov.nist.hit.hl7.codeset.adapter.model.response.ProvidersResponse;
 import gov.nist.hit.hl7.codeset.adapter.serviceImpl.CodesetServiceImpl;
@@ -30,14 +31,14 @@ public class CodesetController {
     }
 
     @GetMapping("/{provider}/codesets")
-    public ResponseEntity<List<CodesetResponse>> getCodesets(@PathVariable String provider, @ModelAttribute CodesetSearchCriteria criteria) throws IOException {
-        List<CodesetResponse> codesets = codesetService.getCodesets(provider, criteria);
+    public ResponseEntity<List<CodesetMetadataResponse>> getCodesets(@PathVariable String provider, @ModelAttribute CodesetSearchCriteria criteria) throws IOException {
+        List<CodesetMetadataResponse> codesets = codesetService.getCodesets(provider, criteria);
         return new ResponseEntity<>(codesets, HttpStatus.OK);
     }
 
     @GetMapping("/{provider}/codesets/{id}/metadata")
-    public ResponseEntity<CodesetResponse> getCodesetMetadata(@PathVariable String provider,@PathVariable String id) throws IOException {
-        CodesetResponse codeset = codesetService.getCodesetMetadata(provider, id);
+    public ResponseEntity<CodesetMetadataResponse> getCodesetMetadata(@PathVariable String provider,@PathVariable String id) throws IOException {
+        CodesetMetadataResponse codeset = codesetService.getCodesetMetadata(provider, id);
         return new ResponseEntity<>(codeset, HttpStatus.OK);
     }
 

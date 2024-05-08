@@ -1,6 +1,7 @@
 package gov.nist.hit.hl7.codeset.adapter.serviceImpl;
 
 import gov.nist.hit.hl7.codeset.adapter.model.request.CodesetRequest;
+import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetMetadataResponse;
 import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetResponse;
 import gov.nist.hit.hl7.codeset.adapter.model.response.ProvidersResponse;
 import gov.nist.hit.hl7.codeset.adapter.repository.CodesetRepository;
@@ -43,7 +44,7 @@ public class CodesetServiceImpl implements CodesetService {
     }
 
     @Override
-    public List<CodesetResponse> getCodesets(String provider, CodesetSearchCriteria criteria) throws IOException {
+    public List<CodesetMetadataResponse> getCodesets(String provider, CodesetSearchCriteria criteria) throws IOException {
         MatchOperation matchOperation = Aggregation.match(Criteria.where("provider").regex("^" + Pattern.quote(provider) + "$", "i")
         );
 
@@ -60,12 +61,12 @@ public class CodesetServiceImpl implements CodesetService {
 
         // Execute the aggregation
         Aggregation aggregation = Aggregation.newAggregation(matchOperation, projectionOperation);
-        AggregationResults<CodesetResponse> results = mongoTemplate.aggregate(aggregation, "codeset", CodesetResponse.class);
+        AggregationResults<CodesetMetadataResponse> results = mongoTemplate.aggregate(aggregation, "codeset", CodesetMetadataResponse.class);
         return results.getMappedResults();
     }
 
     @Override
-    public CodesetResponse getCodesetMetadata(String provider, String id) throws IOException {
+    public CodesetMetadataResponse getCodesetMetadata(String provider, String id) throws IOException {
         Criteria criteria = new Criteria().andOperator(
                 Criteria.where("provider").regex("^" + Pattern.quote(provider) + "$", "i"), // Adjust "someField" to the actual field for provider
                 Criteria.where("phinvadsOid").is(id)
@@ -89,8 +90,8 @@ public class CodesetServiceImpl implements CodesetService {
         );
 
         // Execute the aggregation and expect only one result
-        AggregationResults<CodesetResponse> results = mongoTemplate.aggregate(aggregation, "codeset", CodesetResponse.class);
-        List<CodesetResponse> resultList = results.getMappedResults();
+        AggregationResults<CodesetMetadataResponse> results = mongoTemplate.aggregate(aggregation, "codeset", CodesetMetadataResponse.class);
+        List<CodesetMetadataResponse> resultList = results.getMappedResults();
 
         // Return the first result or null if no results
         return resultList.isEmpty() ? null : resultList.get(0);
@@ -168,6 +169,17 @@ public class CodesetServiceImpl implements CodesetService {
             }
         };
         // Projection to shape the output
+//        ProjectionOperation projectionOperation = Aggregation.project()
+//                .and("name").as("name")
+//                .and("latestVersion").as("latestStableVersion")
+//                .and(context -> {
+//                    return new Document("$ifNull", Arrays.asList(searchCriteria.getMatch(), null));
+//                }).as("codeMatchValue")
+//                .and("codeSetVersionsJoined.codes").as("codes")
+//                .andExpression("{ $map: { input: '$codeSetVersionsJoined.codes', as: 'code', in: { " +
+//                        "value: '$$code.value', displayText: '$$code.description', codeSystem: '$$code.codeSystem' } } }"
+//                ).as("codes")
+//                .and(filterExpression).as("codes");
         ProjectionOperation projectionOperation = Aggregation.project()
                 .and("name").as("name")
                 .and("latestVersion").as("latestStableVersion")
@@ -176,9 +188,13 @@ public class CodesetServiceImpl implements CodesetService {
                 }).as("codeMatchValue")
                 .and("codeSetVersionsJoined.codes").as("codes")
                 .andExpression("{ $map: { input: '$codeSetVersionsJoined.codes', as: 'code', in: { " +
-                        "value: '$$code.value', displayText: '$$code.description', codeSystem: '$$code.codeSystem' } } }"
+                        "value: '$$code.value', description: '$$code.description', codeSystem: '$$code.codeSystem' } } }"
                 ).as("codes")
-                .and(filterExpression).as("codes");
+
+                .and(filterExpression).as("codes")
+                // Adding the version object
+                .and("codeSetVersionsJoined.version").as("version.version")
+                .and("codeSetVersionsJoined.dateUpdated").as("version.date");
 
         if (provider != null && provider.equalsIgnoreCase("phinvads")) {
             projectionOperation = projectionOperation.and("phinvadsOid").as("identifier");

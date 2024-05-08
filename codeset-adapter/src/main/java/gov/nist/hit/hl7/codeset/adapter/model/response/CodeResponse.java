@@ -4,6 +4,8 @@ public class CodeResponse {
     private String value;
     private String codeSystem;
     private String displayText;
+    private String description;
+
     private boolean isPattern;
     private String regularExpression;
     private String usage;
@@ -36,7 +38,7 @@ public class CodeResponse {
     }
 
     public String getDisplayText() {
-        return displayText;
+        return description;
     }
 
     public void setDisplayText(String displayText) {
@@ -65,5 +67,13 @@ public class CodeResponse {
 
     public void setUsage(String usage) {
         this.usage = usage;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }
