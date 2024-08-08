@@ -139,17 +139,25 @@ public class CodesetServiceImpl implements CodesetService {
 
 
         // Conditional match based on version
-        MatchOperation matchVersionOperation = Aggregation.match(
-                Criteria.where("$expr").is(
-                        new org.bson.Document("$or", java.util.Arrays.asList(
-                                new org.bson.Document("$eq", java.util.Arrays.asList(
-                                        "$codeSetVersionsJoined.version", searchCriteria.getVersion() != null ?
-                                                searchCriteria.getVersion() : "$$REMOVE")),
-                                new org.bson.Document("$eq", java.util.Arrays.asList("$codeSetVersionsJoined.version",
-                                        "$latestVersion.version"))
-                        ))
-                )
-        );
+        MatchOperation matchVersionOperation;
+
+        if (searchCriteria.getVersion() != null) {
+            matchVersionOperation = Aggregation.match(
+                    Criteria.where("$expr").is(
+                            new org.bson.Document("$eq", java.util.Arrays.asList(
+                                    "$codeSetVersionsJoined.version", searchCriteria.getVersion()
+                            ))
+                    )
+            );
+        } else {
+            matchVersionOperation = Aggregation.match(
+                    Criteria.where("$expr").is(
+                            new org.bson.Document("$eq", java.util.Arrays.asList(
+                                    "$codeSetVersionsJoined.version", "$latestVersion.version"
+                            ))
+                    )
+            );
+        }
         // Create a custom expression for filtering codes
         AggregationExpression filterExpression = new AggregationExpression() {
             @Override
@@ -215,9 +223,12 @@ public class CodesetServiceImpl implements CodesetService {
         AggregationResults<CodesetResponse> results = mongoTemplate.aggregate(aggregation, "codeset", CodesetResponse.class);
         System.out.println(provider + id);
         System.out.println(results.getRawResults());
+        if(results.getUniqueMappedResult() == null) {
+            // return 404 codeset not found error
+        }
 
-        // Expect only one result
-        return results.getUniqueMappedResult();
+        // Return the unique result or null if no results
+        return results.getMappedResults().isEmpty() ? null : results.getUniqueMappedResult();
     }
 
 }
