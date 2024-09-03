@@ -18,7 +18,7 @@ services:
       - ../../data/codesets-adapter-db/db:/data/db
     env_file:
       - ./codesets-adapter-db/config/db.env
-    restart: always
+    restart: unless-stopped
 
   codesets-adapter:
     build: ./codesets-adapter
@@ -39,6 +39,7 @@ services:
       - codesets-adapter-db:codesets-adapter-db
     volumes:
       - ../../data/codesets-adapter/logs/:/var/log/codesets-adapter/
+    restart: unless-stopped
 
 
 
