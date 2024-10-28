@@ -7,14 +7,11 @@
 //import gov.cdc.vocab.service.bean.ValueSetConcept;
 //import gov.cdc.vocab.service.bean.ValueSetVersion;
 //import gov.cdc.vocab.service.dto.input.CodeSystemSearchCriteriaDto;
-//import gov.cdc.vocab.service.dto.input.ValueSetSearchCriteriaDto;
 //import gov.cdc.vocab.service.dto.output.ValueSetConceptResultDto;
-//import gov.cdc.vocab.service.dto.output.ValueSetResultDto;
 //import gov.nist.hit.hl7.codeset.adapter.model.Code;
 //import gov.nist.hit.hl7.codeset.adapter.model.Codeset;
 //import gov.nist.hit.hl7.codeset.adapter.model.CodesetVersion;
 //import gov.nist.hit.hl7.codeset.adapter.model.VersionMetadata;
-//import gov.nist.hit.hl7.codeset.adapter.model.phinvads.PhinvadsCode;
 //import gov.nist.hit.hl7.codeset.adapter.model.phinvads.PhinvadsValueset;
 //import org.slf4j.Logger;
 //import org.slf4j.LoggerFactory;
@@ -32,15 +29,12 @@
 //import java.security.NoSuchAlgorithmException;
 //import java.security.cert.X509Certificate;
 //import java.text.SimpleDateFormat;
-//import java.util.ArrayList;
-//import java.util.Date;
-//import java.util.HashSet;
-//import java.util.List;
+//import java.util.*;
 //
 //@Component
-//public class PhinvadsScheduler {
+//public class NewPhinvadsScheduler_old {
 //
-//    private static final Logger log = LoggerFactory.getLogger(PhinvadsScheduler.class);
+//    private static final Logger log = LoggerFactory.getLogger(NewPhinvadsScheduler_old.class);
 //
 //    private VocabService service;
 //    @Autowired
@@ -50,15 +44,21 @@
 //
 //    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
 //
-//    public PhinvadsScheduler() throws NoSuchAlgorithmException, KeyManagementException {
+//    public NewPhinvadsScheduler_old() throws NoSuchAlgorithmException, KeyManagementException {
 //        String serviceUrl = "https://phinvads.cdc.gov/vocabService/v2";
 //        /* Start of Fix */
-//        TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
-//            public java.security.cert.X509Certificate[] getAcceptedIssuers() { return null; }
-//            public void checkClientTrusted(X509Certificate[] certs, String authType) { }
-//            public void checkServerTrusted(X509Certificate[] certs, String authType) { }
+//        TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
+//            public X509Certificate[] getAcceptedIssuers() {
+//                return null;
+//            }
 //
-//        } };
+//            public void checkClientTrusted(X509Certificate[] certs, String authType) {
+//            }
+//
+//            public void checkServerTrusted(X509Certificate[] certs, String authType) {
+//            }
+//
+//        }};
 //
 //
 //        HessianProxyFactory factory = new HessianProxyFactory();
@@ -70,7 +70,9 @@
 //
 //            // Create all-trusting host name verifier
 //            HostnameVerifier allHostsValid = new HostnameVerifier() {
-//                public boolean verify(String hostname, SSLSession session) { return true; }
+//                public boolean verify(String hostname, SSLSession session) {
+//                    return true;
+//                }
 //            };
 //            // Install the all-trusting host verifier
 //            HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
@@ -82,6 +84,7 @@
 //        }
 //
 //    }
+//
 ////    @PostConstruct
 //    public void initPhinvads() throws IOException {
 //        System.out.println("************ INIT PHINVADS VALUESET METADATA1");
@@ -100,56 +103,36 @@
 //        for (ValueSet vs : vss) {
 //            count++;
 //            log.info("########" + count + "/" + vss.size() + "########");
-//            this.tableSaveOrUpdate(vs.getOid());
+//            this.tableSaveOrUpdate(vs);
 //        }
 //        log.info("PHINVADSValueSetDigger ended at " + new Date());
 //    }
 //
-//    public Codeset tableSaveOrUpdate(String oid) {
+//    public Codeset tableSaveOrUpdate(ValueSet vs) {
 //        // 1. Get metadata from PHINVADS web service
-//        log.info("Get metadata from PHINVADS web service for " + oid);
-//
-//        ValueSetSearchCriteriaDto vsSearchCrit = new ValueSetSearchCriteriaDto();
-//        vsSearchCrit.setFilterByViews(false);
-//        vsSearchCrit.setFilterByGroups(false);
-//        vsSearchCrit.setCodeSearch(false);
-//        vsSearchCrit.setNameSearch(false);
-//        vsSearchCrit.setOidSearch(true);
-//        vsSearchCrit.setDefinitionSearch(false);
-//        vsSearchCrit.setSearchType(1);
-//        vsSearchCrit.setSearchText(oid);
-//
-//        ValueSetResultDto vsSearchResult = null;
-//
-//        vsSearchResult = this.getService().findValueSets(vsSearchCrit, 1, 5);
-//        List<ValueSet> valueSets = vsSearchResult.getValueSets();
-//
-//        ValueSet vs = null;
+//        log.info("Get metadata from PHINVADS web service for " + vs.getOid());
 //        ValueSetVersion vsv = null;
-//        if (valueSets != null && valueSets.size() > 0) {
-//            vs = valueSets.get(0);
-//            vsv = this.getService().getValueSetVersionsByValueSetOid(vs.getOid()).getValueSetVersions().get(0);
-//            log.info("Successfully got the metadata from PHINVADS web service for " + oid);
-//            log.info(oid + " last updated date is " + vs.getStatusDate().toString());
-//            log.info(oid + " the Version number is " + vsv.getVersionNumber());
 //
-//        } else {
-//            log.info("Failed to get the metadata from PHINVADS web service for " + oid);
-//        }
+//        List<ValueSetVersion> vsvList = this.getService().getValueSetVersionsByValueSetOid(vs.getOid()).getValueSetVersions();
+//        vsv = vsvList.get(0);
+//        log.info("Successfully got the metadata from PHINVADS web service for " + vs.getOid());
+//        log.info(vs.getOid() + " last updated date is " + vs.getStatusDate().toString());
+//        log.info(vs.getOid() + " the Version number is " + vsv.getVersionNumber());
+//
 //
 //        // 2. Get Codeset from DB
-//        log.info("Get metadata from DB for " + oid);
+//        log.info("Get metadata from DB for " + vs.getOid());
 //
 //        Codeset codeset = null;
-//        codeset = mongoOps.findOne(Query.query(Criteria.where("phinvadsOid").is(oid)),
+//        codeset = mongoOps.findOne(Query.query(Criteria.where("phinvadsOid").is(vs.getOid())),
 //                Codeset.class);
 //
 //        if (codeset != null) {
-//            log.info("Successfully got the metadata from DBe for " + oid);
-//            log.info(oid + " last updated date is " + codeset.getDateUpdated());
-//            log.info(oid + " the Version number is " + codeset.getLatestVersion());
+//            log.info("Successfully got the metadata from DBe for " + vs.getOid());
+//            log.info(vs.getOid() + " last updated date is " + codeset.getDateUpdated());
+//            log.info(vs.getOid() + " the Version number is " + codeset.getLatestVersion());
 //        } else {
-//            log.info("Failed to get the metadata from DB for " + oid);
+//            log.info("Failed to get the metadata from DB for " + vs.getOid());
 //        }
 //
 //        ValueSetConceptResultDto vscByVSVid = null;
@@ -157,41 +140,40 @@
 //
 //        // 3. compare metadata
 //        boolean needUpdate = false;
-//        if (vs != null && vsv != null) {
+//        if (vsv != null) {
 //            if (codeset != null) {
-//
 //                if (codeset.getDateUpdated() != null && codeset.getDateUpdated().equals(vs.getStatusDate())
-//                        && codeset.getLatestVersion().getVersion().equals(String.valueOf(vsv.getVersionNumber()))  ) {
+//                        && codeset.getLatestVersion().getVersion().equals(String.valueOf(vsv.getVersionNumber()))) {
 //                    CodesetVersion codesetVersion = mongoOps.findOne(Query.query(Criteria.where("version").is(codeset.getLatestVersion())),
 //                            CodesetVersion.class);
-//                    if(codesetVersion != null){
-//                        if (codesetVersion.getCodes().size() == 0 ) {
-//                            vscByVSVid = this.getService().getValueSetConceptsByValueSetVersionId(vsv.getId(), 1, 100000);
+//                    if (codesetVersion != null) {
+//                        if (codesetVersion.getCodes().size() == 0) {
+//                            vscByVSVid = this.getService().getValueSetConceptsByValueSetVersionId(vsv.getId(), 1, Integer.MAX_VALUE);
 //                            valueSetConcepts = vscByVSVid.getValueSetConcepts();
 //                            if (valueSetConcepts.size() != 0) {
 //                                needUpdate = true;
-//                                log.info(oid + " Codeset has no change! however local PHINVADS codes may be missing");
+//                                log.info(vs.getOid() + " Codeset has no change! however local PHINVADS codes may be missing");
 //                            }
 //                        }
 //                    }
 //
 //                } else {
 //                    needUpdate = true;
-//                    log.info(oid + " Codeset has a change! because different version number and date.");
+//                    log.info(vs.getOid() + " Codeset has a change! because different version number and date.");
 //                }
 //            } else {
 //                needUpdate = true;
-//                log.info(oid + " Codeset is new one.");
+//                log.info(vs.getOid() + " Codeset is new one.");
 //            }
 //        } else {
 //            needUpdate = false;
-//            log.info(oid + " Codeset has no change! because PHINVADS does not have it.");
+//            log.info(vs.getOid() + " Codeset has no change! because PHINVADS does not have it.");
 //        }
 //
 //        // 4. if updated, get full codes from PHINVADs web service
 //        if (needUpdate) {
 //            if (vscByVSVid == null)
-//                vscByVSVid = this.getService().getValueSetConceptsByValueSetVersionId(vsv.getId(), 1, 10000);
+//                vscByVSVid = this.getService().getValueSetConceptsByValueSetVersionId(vsv.getId(), 1, Integer.MAX_VALUE);
 //            if (valueSetConcepts == null)
 //                valueSetConcepts = vscByVSVid.getValueSetConcepts();
 ////			if (codeset == null)
@@ -199,7 +181,7 @@
 //            List<ValueSetVersion> vsvByVSOid = this.getService().getValueSetVersionsByValueSetOid(vs.getOid())
 //                    .getValueSetVersions();
 //
-//            if(codeset == null){
+//            if (codeset == null) {
 //                codeset = new Codeset();
 //                codeset.setVersions(new ArrayList<VersionMetadata>());
 //            }
@@ -212,41 +194,46 @@
 //            codeset.setName(vs.getCode());
 //            codeset.setDescription(vs.getName());
 //            codeset.setPhinvadsOid(vs.getOid());
-//            VersionMetadata versionMetadata = new VersionMetadata(String.valueOf(vsvByVSOid.get(0).getVersionNumber()),vs.getStatusDate(),valueSetConcepts.size() );
+//            VersionMetadata versionMetadata = new VersionMetadata(String.valueOf(vsvByVSOid.get(0).getVersionNumber()), vs.getStatusDate(), valueSetConcepts.size());
 //            codeset.setLatestVersion(versionMetadata);
 //            codeset.getVersions().add(versionMetadata);
 //            codeset.setProvider("phinvads");
 //            codeset.setDateUpdated(vs.getStatusDate());
 //            codeset.setCodeSetVersions(new HashSet<CodesetVersion>());
 //
-//            if (valueSetConcepts.size() > 500) {
-//                System.out.println("Number of codes: " + valueSetConcepts.size() );
-//                codeset.setHasPartCodes(true);
-//                codesetVersion.setHasPartCodes(true);
-//            } else {
+////            if (valueSetConcepts.size() > 500) {
+////                System.out.println("Number of codes: " + valueSetConcepts.size());
+////                codeset.setHasPartCodes(true);
+////                codesetVersion.setHasPartCodes(true);
+////            } else {
 //                codeset.setHasPartCodes(false);
 //                codesetVersion.setHasPartCodes(false);
-//
+//                Set<String> codeSystemOids = new HashSet<>();
+//                Map<String, CodeSystem> uniqueIdCodeSystemMap = new HashMap<>();
+//                List<Code> codes = new ArrayList<Code>();
 //                for (ValueSetConcept pcode : valueSetConcepts) {
-//                    CodeSystemSearchCriteriaDto csSearchCritDto = new CodeSystemSearchCriteriaDto();
-//                    csSearchCritDto.setCodeSearch(false);
-//                    csSearchCritDto.setNameSearch(false);
-//                    csSearchCritDto.setOidSearch(true);
-//                    csSearchCritDto.setDefinitionSearch(false);
-//                    csSearchCritDto.setAssigningAuthoritySearch(false);
-//                    csSearchCritDto.setTable396Search(false);
-//                    csSearchCritDto.setSearchType(1);
-//                    csSearchCritDto.setSearchText(pcode.getCodeSystemOid());
-//                    CodeSystem cs = this.getService().findCodeSystems(csSearchCritDto, 1, 5).getCodeSystems().get(0);
+//                    if(uniqueIdCodeSystemMap.get(pcode.getCodeSystemOid()) == null){
+//                        CodeSystemSearchCriteriaDto csSearchCritDto = new CodeSystemSearchCriteriaDto();
+//                        csSearchCritDto.setCodeSearch(false);
+//                        csSearchCritDto.setNameSearch(false);
+//                        csSearchCritDto.setOidSearch(true);
+//                        csSearchCritDto.setDefinitionSearch(false);
+//                        csSearchCritDto.setAssigningAuthoritySearch(false);
+//                        csSearchCritDto.setTable396Search(false);
+//                        csSearchCritDto.setSearchType(1);
+//                        csSearchCritDto.setSearchText(pcode.getCodeSystemOid());
+//                        CodeSystem cs = this.getService().findCodeSystems(csSearchCritDto, 1, 5).getCodeSystems().get(0);
+//                        uniqueIdCodeSystemMap.put(pcode.getCodeSystemOid(), cs);
+//                    }
 //                    Code code = new Code();
 //                    code.setValue(pcode.getConceptCode());
 //                    code.setDescription(pcode.getCodeSystemConceptName());
 //                    code.setComments(pcode.getDefinitionText());
 ////					code.setUsage(CodeUsage.P);
-//                    code.setCodeSystem(cs.getHl70396Identifier());
+//                    code.setCodeSystem(uniqueIdCodeSystemMap.get(pcode.getCodeSystemOid()).getHl70396Identifier());
 //                    codesetVersion.getCodes().add(code);
 //                }
-//            }
+////            }
 //
 //            // 5. update Codeset on DB
 //            try {
@@ -254,7 +241,7 @@
 //                CodesetVersion savedCodesetVersion = mongoOps.save(codesetVersion);
 //                codeset.getCodeSetVersions().add(savedCodesetVersion);
 //                mongoOps.save(codeset);
-//                log.info(oid + " Codeset is updated.");
+//                log.info(vs.getOid() + " Codeset is updated.");
 //
 //            } catch (Exception e) {
 //                e.printStackTrace();
@@ -262,7 +249,7 @@
 //            }
 //            return codeset;
 //        } else {
-//            log.info(oid + " Codeset is NOT updated.");
+//            log.info(vs.getOid() + " Codeset is NOT updated.");
 //        }
 //        return null;
 //    }

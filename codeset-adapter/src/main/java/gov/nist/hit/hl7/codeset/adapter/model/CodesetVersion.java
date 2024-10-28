@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
@@ -31,7 +32,6 @@ public class CodesetVersion {
 
     private String comments;
 
-    private Set<Code> codes;
 
     private boolean deprecated;
     private Boolean hasPartCodes;
@@ -80,13 +80,7 @@ public class CodesetVersion {
         this.comments = comments;
     }
 
-    public Set<Code> getCodes() {
-        return codes;
-    }
 
-    public void setCodes(Set<Code> codes) {
-        this.codes = codes;
-    }
 
 
     public Date getDateCreated() {

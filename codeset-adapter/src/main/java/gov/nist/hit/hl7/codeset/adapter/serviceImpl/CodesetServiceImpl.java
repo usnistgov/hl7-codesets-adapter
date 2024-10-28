@@ -1,6 +1,8 @@
 package gov.nist.hit.hl7.codeset.adapter.serviceImpl;
 
+import gov.nist.hit.hl7.codeset.adapter.model.Code;
 import gov.nist.hit.hl7.codeset.adapter.model.request.CodesetRequest;
+import gov.nist.hit.hl7.codeset.adapter.model.response.CodeResponse;
 import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetMetadataResponse;
 import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetResponse;
 import gov.nist.hit.hl7.codeset.adapter.model.response.ProvidersResponse;
@@ -22,6 +24,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 public class CodesetServiceImpl implements CodesetService {
@@ -115,120 +118,77 @@ public class CodesetServiceImpl implements CodesetService {
 //        });
 //    }
 
-    @Override
+
     public CodesetResponse getCodeset(String provider, String id, CodesetSearchCriteria searchCriteria) throws IOException {
-        Criteria criteria = new Criteria().andOperator(
-                Criteria.where("provider").regex("^" + Pattern.quote(provider) + "$", "i"), // Adjust "someField" to the actual field for provider
-                Criteria.where("phinvadsOid").is(id)
-        );
+        // Step 1: Initial match criteria for the Codeset based on provider and ID
+        Criteria criteria = Criteria.where("provider").regex("^" + Pattern.quote(provider) + "$", "i")
+                .and("phinvadsOid").is(id);
 
+        List<AggregationOperation> operations = new ArrayList<>();
+        operations.add(Aggregation.match(criteria));
 
-        // Manually handle DBRefs: assuming 'codeSetVersions' holds DBRef
-        ProjectionOperation projectToExtractIds = Aggregation.project()
-                .andExpression("codeSetVersions.$id").as("versionIds")
-                .andInclude("phinvadsOid", "name", "latestVersion", "dateUpdated");
-
-        // Lookup to join with the CodesetVersion collection
-        LookupOperation lookupOperation = LookupOperation.newLookup()
+        // Step 2: Lookup for CodesetVersion
+        LookupOperation lookupCodesetVersion = LookupOperation.newLookup()
                 .from("codesetVersion")
-                .localField("versionIds")
+                .localField("codeSetVersions.$id")
                 .foreignField("_id")
-                .as("codeSetVersionsJoined");
-        // Unwind the resulting array to handle documents separately
-        UnwindOperation unwindOperation = Aggregation.unwind("codeSetVersionsJoined");
+                .as("codesetVersion");
+        operations.add(lookupCodesetVersion);
 
+        // Step 3: Unwind CodesetVersion
+        UnwindOperation unwindCodesetVersion = Aggregation.unwind("codesetVersion");
+        operations.add(unwindCodesetVersion);
 
-        // Conditional match based on version
-        MatchOperation matchVersionOperation;
-
+        // Step 4: Match on the version using $expr
+        MatchOperation matchVersion;
         if (searchCriteria.getVersion() != null) {
-            matchVersionOperation = Aggregation.match(
-                    Criteria.where("$expr").is(
-                            new org.bson.Document("$eq", java.util.Arrays.asList(
-                                    "$codeSetVersionsJoined.version", searchCriteria.getVersion()
-                            ))
-                    )
-            );
+            matchVersion = Aggregation.match(Criteria.where("codesetVersion.version").is(searchCriteria.getVersion()));
         } else {
-            matchVersionOperation = Aggregation.match(
-                    Criteria.where("$expr").is(
-                            new org.bson.Document("$eq", java.util.Arrays.asList(
-                                    "$codeSetVersionsJoined.version", "$latestVersion.version"
-                            ))
-                    )
-            );
+            matchVersion = Aggregation.match(Criteria.where("$expr").is(
+                    new Document("$eq", Arrays.asList("$codesetVersion.version", "$latestVersion.version"))
+            ));
         }
-        // Create a custom expression for filtering codes
-        AggregationExpression filterExpression = new AggregationExpression() {
-            @Override
-            public Document toDocument(AggregationOperationContext context) {
-                if (searchCriteria.getMatch() == null) {
-                    return new Document("$filter", new Document("input", "$codeSetVersionsJoined.codes").append("as", "code")
-                            .append("cond", new Document()));
-                }
-                Document filterCond = new Document("$cond", Arrays.asList(
-                        new Document("$eq", Arrays.asList("$$code.pattern", true)),
-                        new Document("$regexMatch", new Document("input", "$$code.value").append("regex", searchCriteria.getMatch()).append("options", "i")),
-                        new Document("$eq", Arrays.asList("$$code.value", searchCriteria.getMatch()))
-                ));
-                return new Document("$filter", new Document("input", "$codeSetVersionsJoined.codes")
-                        .append("as", "code")
-                        .append("cond", filterCond));
-            }
-        };
-        // Projection to shape the output
-//        ProjectionOperation projectionOperation = Aggregation.project()
-//                .and("name").as("name")
-//                .and("latestVersion").as("latestStableVersion")
-//                .and(context -> {
-//                    return new Document("$ifNull", Arrays.asList(searchCriteria.getMatch(), null));
-//                }).as("codeMatchValue")
-//                .and("codeSetVersionsJoined.codes").as("codes")
-//                .andExpression("{ $map: { input: '$codeSetVersionsJoined.codes', as: 'code', in: { " +
-//                        "value: '$$code.value', displayText: '$$code.description', codeSystem: '$$code.codeSystem' } } }"
-//                ).as("codes")
-//                .and(filterExpression).as("codes");
-        ProjectionOperation projectionOperation = Aggregation.project()
+        operations.add(matchVersion);
+
+
+        // Step 6: Use projection
+        ProjectionOperation projection;
+
+        projection = Aggregation.project()
                 .and("name").as("name")
                 .and("latestVersion").as("latestStableVersion")
-                .and(context -> {
-                    return new Document("$ifNull", Arrays.asList(searchCriteria.getMatch(), null));
-                }).as("codeMatchValue")
-                .and("codeSetVersionsJoined.codes").as("codes")
-                .andExpression("{ $map: { input: '$codeSetVersionsJoined.codes', as: 'code', in: { " +
-                        "value: '$$code.value', description: '$$code.description', codeSystem: '$$code.codeSystem' } } }"
-                ).as("codes")
+                .and("phinvadsOid").as("identifier")
+                .and("codesetVersion.version").as("version.version")
+                .and("codesetVersion._id").as("version._id")
+                .and("codesetVersion.dateUpdated").as("version.date");
+        operations.add(projection);
 
-                .and(filterExpression).as("codes")
-                // Adding the version object
-                .and("codeSetVersionsJoined.version").as("version.version")
-                .and("codeSetVersionsJoined.dateUpdated").as("version.date");
+        // Final Aggregation
+        Aggregation finalAggregation = Aggregation.newAggregation(operations);
+        AggregationResults<CodesetResponse> finalResults = mongoTemplate.aggregate(finalAggregation, "codeset", CodesetResponse.class);
 
-        if (provider != null && provider.equalsIgnoreCase("phinvads")) {
-            projectionOperation = projectionOperation.and("phinvadsOid").as("identifier");
-        } else {
 
+        CodesetResponse codesetResponse = finalResults.getUniqueMappedResult();
+        if (codesetResponse == null) {
+            return null;  // No matching Codeset found
         }
 
-        Aggregation aggregation = Aggregation.newAggregation(
-                Aggregation.match(criteria),
-                projectToExtractIds,
-                lookupOperation,
-                unwindOperation,
-                matchVersionOperation,
-                projectionOperation
-        );
-
-        // Execute the aggregation
-        AggregationResults<CodesetResponse> results = mongoTemplate.aggregate(aggregation, "codeset", CodesetResponse.class);
-        System.out.println(provider + id);
-        System.out.println(results.getRawResults());
-        if(results.getUniqueMappedResult() == null) {
-            // return 404 codeset not found error
+        //  Fetch codes array based on getMatch()
+        Criteria codeCriteria = Criteria.where("codesetversionId").is(codesetResponse.getVersion().getId());
+        if (searchCriteria.getMatch() != null) {
+            codeCriteria = codeCriteria.and("value").regex(searchCriteria.getMatch(), "i");
         }
 
-        // Return the unique result or null if no results
-        return results.getMappedResults().isEmpty() ? null : results.getUniqueMappedResult();
+        List<Code> codes = mongoTemplate.find(Query.query(codeCriteria), Code.class);
+        List<CodeResponse> codeResponses = codes.stream()
+                .map(code -> new CodeResponse(code))
+                .collect(Collectors.toList());
+        codesetResponse.setCodes(codeResponses);
+        // Add codeMatchValue only if searchCriteria.getMatch() is provided
+        if (searchCriteria.getMatch() != null) {
+            codesetResponse.setCodeMatchValue(searchCriteria.getMatch());
+        }
+        return codesetResponse;
     }
 
 }
