@@ -1,15 +1,12 @@
 package gov.nist.hit.hl7.codeset.adapter.serviceImpl;
 
 import gov.nist.hit.hl7.codeset.adapter.model.Code;
-import gov.nist.hit.hl7.codeset.adapter.model.request.CodesetRequest;
 import gov.nist.hit.hl7.codeset.adapter.model.response.CodeResponse;
 import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetMetadataResponse;
 import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetResponse;
 import gov.nist.hit.hl7.codeset.adapter.model.response.ProvidersResponse;
 import gov.nist.hit.hl7.codeset.adapter.repository.CodesetRepository;
 import gov.nist.hit.hl7.codeset.adapter.repository.CodesetVersionRepository;
-import gov.nist.hit.hl7.codeset.adapter.model.Codeset;
-import gov.nist.hit.hl7.codeset.adapter.model.CodesetVersion;
 import gov.nist.hit.hl7.codeset.adapter.model.request.CodesetSearchCriteria;
 import gov.nist.hit.hl7.codeset.adapter.service.CodesetService;
 import org.bson.Document;
@@ -31,11 +28,14 @@ public class CodesetServiceImpl implements CodesetService {
     private final CodesetRepository codesetRepository;
     private final CodesetVersionRepository codesetVersionRepository;
     private final MongoTemplate mongoTemplate;
+    private final PhinvadsServiceImpl phinvadsService;
 
-    public CodesetServiceImpl(CodesetRepository codesetRepository, CodesetVersionRepository codesetVersionRepository, MongoTemplate mongoTemplate) {
+
+    public CodesetServiceImpl(CodesetRepository codesetRepository, CodesetVersionRepository codesetVersionRepository, MongoTemplate mongoTemplate, PhinvadsServiceImpl phinvadsService) {
         this.codesetRepository = codesetRepository;
         this.codesetVersionRepository = codesetVersionRepository;
         this.mongoTemplate = mongoTemplate;
+        this.phinvadsService = phinvadsService;
     }
 
 
@@ -48,11 +48,13 @@ public class CodesetServiceImpl implements CodesetService {
 
     @Override
     public List<CodesetMetadataResponse> getCodesets(String provider, CodesetSearchCriteria criteria) throws IOException {
+//        phinvadsService.getCodesets(criteria);
         MatchOperation matchOperation = Aggregation.match(Criteria.where("provider").regex("^" + Pattern.quote(provider) + "$", "i")
         );
 
         ProjectionOperation projectionOperation = Aggregation.project()
                 .and("name").as("name")
+                .and("versions").as("versions")
                 .and("latestVersion").as("latestStableVersion");
 
         if (provider != null && provider.equalsIgnoreCase("phinvads")) {
@@ -60,7 +62,6 @@ public class CodesetServiceImpl implements CodesetService {
         } else {
 
         }
-
 
         // Execute the aggregation
         Aggregation aggregation = Aggregation.newAggregation(matchOperation, projectionOperation);
@@ -95,9 +96,14 @@ public class CodesetServiceImpl implements CodesetService {
         // Execute the aggregation and expect only one result
         AggregationResults<CodesetMetadataResponse> results = mongoTemplate.aggregate(aggregation, "codeset", CodesetMetadataResponse.class);
         List<CodesetMetadataResponse> resultList = results.getMappedResults();
+        if(resultList.isEmpty()){
+            throw new IOException("Codeset not found");
+        } else {
+            // Return the first result or null if no results
+            return resultList.get(0);
+        }
 
-        // Return the first result or null if no results
-        return resultList.isEmpty() ? null : resultList.get(0);
+
 
     }
 //    public List<Codeset> getCodesets(CodesetSearchCriteria criteria) throws IOException {
@@ -169,8 +175,8 @@ public class CodesetServiceImpl implements CodesetService {
 
 
         CodesetResponse codesetResponse = finalResults.getUniqueMappedResult();
-        if (codesetResponse == null) {
-            return null;  // No matching Codeset found
+        if(codesetResponse == null){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Codeset not found");
         }
 
         //  Fetch codes array based on getMatch()

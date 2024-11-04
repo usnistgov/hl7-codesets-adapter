@@ -1,0 +1,72 @@
+stages:
+  - build
+  - push
+  - deploy_staging
+  - deploy_production
+
+variables:
+  DOCKER_REGISTRY: xdocker.nist.gov:5050
+  IMAGE_NAME: $DOCKER_REGISTRY/inm1/hl7-codesets-adapter:latest
+  DOCKER_DRIVER: overlay2
+  DOCKER_HOST: tcp://docker:2375  # Ensure Docker commands connect to the DinD service
+  DOCKER_TLS_CERTDIR: ""          # Disable TLS for Docker-in-Docker
+
+# Step 1: Build and Push Docker Images
+build_and_push:
+  stage: push
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - echo "Logging in to Docker Registry"
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $DOCKER_REGISTRY
+    - echo "Building Docker images"
+    - docker-compose -f infrastructure/containers/apps/docker-compose.yml build
+    - echo "Tagging and pushing application image to GitLab Container Registry"
+    - docker tag ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA} $IMAGE_NAME
+    - docker push $IMAGE_NAME
+  only:
+    - main
+
+
+
+# # Step 2: Deploy to Staging Environment
+# deploy_staging:
+#   stage: deploy_staging
+#   image: docker:latest
+#   services:
+#     - docker:dind
+#   environment:
+#     name: staging
+#     url: http://staging.example.com  # Change to your staging server's URL
+#   script:
+#     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $DOCKER_REGISTRY
+#     - docker pull $IMAGE_NAME
+#     - docker-compose -f infrastructure/containers/apps/docker-compose.yml up -d
+#   only:
+#     - main
+#   tags:
+#     - self-hosted  # Ensure the job runs on a self-hosted runner tagged as 'self-hosted'
+#   dependencies:
+#     - build_and_push
+
+# # Step 3: Manual Production Deployment
+# deploy_production:
+#   stage: deploy_production
+#   image: docker:latest
+#   services:
+#     - docker:dind
+#   environment:
+#     name: production
+#     url: http://production.example.com  # Change to your production server's URL
+#   script:
+#     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $DOCKER_REGISTRY
+#     - docker pull $IMAGE_NAME
+#     - docker-compose -f infrastructure/containers/apps/docker-compose.yml up -d
+#   only:
+#     - main
+#   tags:
+#     - self-hosted
+#   when: manual
+#   dependencies:
+#     - build_and_push

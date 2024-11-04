@@ -17,6 +17,7 @@ import java.util.UUID;
 public class CodesetVersion {
     @Id
     private String id;
+    private String codesetId;
 
     private String version;
 
@@ -46,6 +47,14 @@ public class CodesetVersion {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public String getCodesetId() {
+        return codesetId;
+    }
+
+    public void setCodesetId(String codesetId) {
+        this.codesetId = codesetId;
     }
 
     public String getVersion() {

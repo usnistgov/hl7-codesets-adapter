@@ -232,7 +232,7 @@ public class NewPhinvadsScheduler {
                     code.setValue(pcode.getConceptCode());
                     code.setDescription(pcode.getCodeSystemConceptName());
                     code.setComments(pcode.getDefinitionText());
-					code.setUsage("P");
+//					code.setUsage("P");
                     code.setCodeSystem(uniqueIdCodeSystemMap.get(pcode.getCodeSystemOid()).getHl70396Identifier());
                     code.setCodesetversionId(savedCodesetVersion.getId());
                     codes.add(code);
