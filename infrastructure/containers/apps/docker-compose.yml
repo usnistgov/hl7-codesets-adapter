@@ -10,7 +10,7 @@ services:
     expose:
       - "27017"
     healthcheck:
-      test: ["CMD-SHELL", "mongo localhost:27017 --eval db.serverStatus() "]
+      test: ["CMD-SHELL", "mongo localhost:27017 --eval db.serverStatus()"]
       interval: 30s
       timeout: 30s
       retries: 3
@@ -21,28 +21,29 @@ services:
     restart: unless-stopped
 
   codesets-adapter:
-    build: ./codesets-adapter
-    image: codesets-adapter
+    build:
+      context: ../../../  # Sets the build context to the project root
+      dockerfile: infrastructure/containers/apps/codesets-adapter/Dockerfile  # Specifies the Dockerfile location
+    # image: ${DOCKER_REGISTRY}/inm1/hl7-codesets-adapter:${CI_COMMIT_SHA}
+    image: ${DOCKER_REGISTRY}/inm1/hl7-codesets-adapter:latest  # Use 'latest' tag for auto-updates
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     networks:
       - codesets-adapter-network
     expose:
-      - "19070"
+      - "8880"
     ports:
-      - "19070:8080"
+      - "8880:8080"
     container_name: codesets-adapter
     depends_on:
       - codesets-adapter-db
     env_file:
       - ./codesets-adapter-db/config/db.env
-      # - ./codesets-adapter/config/config.env
     links:
       - codesets-adapter-db:codesets-adapter-db
     volumes:
       - ../../data/codesets-adapter/logs/:/var/log/codesets-adapter/
     restart: unless-stopped
 
-
-
 networks:
   codesets-adapter-network:
-

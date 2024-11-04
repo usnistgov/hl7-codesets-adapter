@@ -90,7 +90,7 @@ public class PhinvadsWebServiceClient {
 
     }
 
-    @PostConstruct
+    // @PostConstruct
     public void initPhinvads() throws IOException {
         System.out.println("************ INIT PHINVADS VALUESET METADATA");
         updateCodesets();
