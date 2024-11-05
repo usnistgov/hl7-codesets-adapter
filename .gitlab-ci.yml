@@ -23,7 +23,8 @@ build_and_push:
     - echo "Building Docker images"
     - docker-compose -f infrastructure/containers/apps/docker-compose.yml build
     - echo "Tagging and pushing application image to GitLab Container Registry"
-    - docker tag ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA} $IMAGE_NAME
+    # - docker tag ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA} $IMAGE_NAME
+    - docker tag $IMAGE_NAME
     - docker push $IMAGE_NAME
   only:
     - devops
