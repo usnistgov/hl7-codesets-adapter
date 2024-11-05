@@ -1,5 +1,6 @@
 # Pull base image.
-FROM mongo:4.4.15
+# FROM mongo:4.4.15
+FROM mongo:latest
 
 RUN apt-get update \
     && apt-get install -y curl unzip vim wget \

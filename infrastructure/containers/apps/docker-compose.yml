@@ -25,7 +25,7 @@ services:
       context: ../../../  # Sets the build context to the project root
       dockerfile: infrastructure/containers/apps/codesets-adapter/Dockerfile  # Specifies the Dockerfile location
     # image: ${DOCKER_REGISTRY}/inm1/hl7-codesets-adapter:${CI_COMMIT_SHA}
-    image: nist775hit/hl7v2-codeset-adapter:latest  # Use 'latest' tag for auto-updates
+    image: ${DOCKER_REGISTRY}/inm1/hl7-codesets-adapter:latest  # Use 'latest' tag for auto-updates
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     networks:
