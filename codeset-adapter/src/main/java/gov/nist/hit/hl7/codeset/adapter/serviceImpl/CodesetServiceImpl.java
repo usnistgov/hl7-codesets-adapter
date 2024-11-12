@@ -134,18 +134,12 @@ public class CodesetServiceImpl implements CodesetService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider "+ provider.toLowerCase() + " not found"));
 
 
-//        CodeResponse codeset = providerService.getCodeset(id, searchCriteria);
         String version = searchCriteria.getVersion();
         if(version == null){
             version = providerService.getLatestVersion(id);
         }
 
-//        Codeset codeset = codesetRepository.findByIdentifier(id).orElse(null);
         providerService.getCodesetAndSave(id, version);
-
-
-
-
 
         // Step 1: Initial match criteria for the Codeset based on provider and ID
         Criteria criteria = Criteria.where("provider").regex("^" + Pattern.quote(provider) + "$", "i")
@@ -195,16 +189,18 @@ public class CodesetServiceImpl implements CodesetService {
         if(codesetResponse == null){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Codeset not found");
         }
+
         Codeset codeset = codesetRepository.findByIdentifier(id).orElse(null);
         CodesetVersion codesetVersion = codesetVersionRepository.findByCodesetIdAndVersion(codeset.getId(), version).orElse(null);
         List<Code> codes = new ArrayList<>();
         if(codesetVersion.getCodesStatus().equals(CodesetVersion.CodesStatus.NOT_NEEDED)){
             // Codes are not stored in DB. Need to get them from web service
-            codes = providerService.getCodes(id, version);
+            codes = providerService.getCodes(id, version, searchCriteria.getMatch());
         } else {
             Criteria codeCriteria = Criteria.where("codesetversionId").is(codesetResponse.getVersion().getId());
             if (searchCriteria.getMatch() != null) {
-                codeCriteria = codeCriteria.and("value").regex(searchCriteria.getMatch(), "i");
+//                codeCriteria = codeCriteria.and("value").regex(searchCriteria.getMatch(), "i");
+                codeCriteria = codeCriteria.and("value").is(searchCriteria.getMatch());
             }
 
            codes = mongoTemplate.find(Query.query(codeCriteria), Code.class);

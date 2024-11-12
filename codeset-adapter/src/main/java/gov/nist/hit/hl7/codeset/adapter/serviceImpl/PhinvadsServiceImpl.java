@@ -7,8 +7,10 @@ import gov.cdc.vocab.service.bean.ValueSet;
 import gov.cdc.vocab.service.bean.ValueSetConcept;
 import gov.cdc.vocab.service.bean.ValueSetVersion;
 import gov.cdc.vocab.service.dto.input.CodeSystemSearchCriteriaDto;
+import gov.cdc.vocab.service.dto.input.ValueSetConceptSearchCriteriaDto;
 import gov.cdc.vocab.service.dto.input.ValueSetSearchCriteriaDto;
 import gov.cdc.vocab.service.dto.input.ValueSetVersionSearchCriteriaDto;
+import gov.cdc.vocab.service.dto.output.ValueSetConceptResultDto;
 import gov.cdc.vocab.service.dto.output.ValueSetResultDto;
 import gov.cdc.vocab.service.dto.output.ValueSetVersionResultDto;
 import gov.nist.hit.hl7.codeset.adapter.model.*;
@@ -93,7 +95,7 @@ public class PhinvadsServiceImpl implements ProviderService {
 
     }
 
-//        @PostConstruct
+//            @PostConstruct
     public void initPhinvads() throws IOException {
         System.out.println("************ INIT PHINVADS VALUESET METADATA");
         updateCodesets();
@@ -331,30 +333,51 @@ public class PhinvadsServiceImpl implements ProviderService {
     }
 
     @Override
-    public List<Code> getCodes(String id, String version) throws IOException {
+    public List<Code> getCodes(String id, String version, String match) throws IOException {
         ValueSetVersion valuesetVersion = getValuesetVersion(id, version);
         if (valuesetVersion == null) {
             return new ArrayList<>();
         }
-        List<ValueSetConcept> valueSetConcepts = this.service
-                .getValueSetConceptsByValueSetVersionId(valuesetVersion.getId(), 1, Integer.MAX_VALUE)
-                .getValueSetConcepts();
+//        List<ValueSetConcept> valueSetConcepts = this.service
+//                .getValueSetConceptsByValueSetVersionId(valuesetVersion.getId(), 1, Integer.MAX_VALUE)
+//                .getValueSetConcepts();
+        List<ValueSetConcept> valueSetConcepts = new ArrayList<>();
+        if (match != null) {
+            ValueSetConceptSearchCriteriaDto valueSetConceptSearchCriteriaDto = new ValueSetConceptSearchCriteriaDto();
+            valueSetConceptSearchCriteriaDto.setSearchText(match);
+            valueSetConceptSearchCriteriaDto.setSearchType(1);
+            valueSetConceptSearchCriteriaDto.setVersionOption(3);
+            valueSetConceptSearchCriteriaDto.setFilterByValueSets(true);
+            valueSetConceptSearchCriteriaDto.setValueSetOids(Arrays.asList(id));
+            valueSetConceptSearchCriteriaDto.setConceptCodeSearch(true);
+            ValueSetConceptResultDto valueSetConceptResultDto = this.service.findValueSetConcepts(valueSetConceptSearchCriteriaDto, 1, Integer.MAX_VALUE);
+            valueSetConcepts = valueSetConceptResultDto.getValueSetConcepts();
+
+        } else {
+            valueSetConcepts = this.service
+                    .getValueSetConceptsByValueSetVersionId(valuesetVersion.getId(), 1, Integer.MAX_VALUE)
+                    .getValueSetConcepts();
+        }
+
         // Get code systems and save all codes
         Set<String> codeSystemOids = new HashSet<>();
         Map<String, CodeSystem> uniqueIdCodeSystemMap = new HashMap<>();
         List<Code> codes = new ArrayList<Code>();
         for (ValueSetConcept pcode : valueSetConcepts) {
-            if (uniqueIdCodeSystemMap.get(pcode.getCodeSystemOid()) == null) {
-                CodeSystem cs = getCodeSystem(pcode.getCodeSystemOid());
-                uniqueIdCodeSystemMap.put(pcode.getCodeSystemOid(), cs);
+            if(pcode.getValueSetVersionId().equals(valuesetVersion.getId())){
+                if (uniqueIdCodeSystemMap.get(pcode.getCodeSystemOid()) == null) {
+                    CodeSystem cs = getCodeSystem(pcode.getCodeSystemOid());
+                    uniqueIdCodeSystemMap.put(pcode.getCodeSystemOid(), cs);
+                }
+                Code code = new Code();
+                code.setValue(pcode.getConceptCode());
+                code.setDescription(pcode.getCodeSystemConceptName());
+                code.setComments(pcode.getDefinitionText());
+                code.setUsage("R");
+                code.setCodeSystem(uniqueIdCodeSystemMap.get(pcode.getCodeSystemOid()).getHl70396Identifier());
+                codes.add(code);
             }
-            Code code = new Code();
-            code.setValue(pcode.getConceptCode());
-            code.setDescription(pcode.getCodeSystemConceptName());
-            code.setComments(pcode.getDefinitionText());
-            code.setUsage("R");
-            code.setCodeSystem(uniqueIdCodeSystemMap.get(pcode.getCodeSystemOid()).getHl70396Identifier());
-            codes.add(code);
+
         }
         return codes;
     }

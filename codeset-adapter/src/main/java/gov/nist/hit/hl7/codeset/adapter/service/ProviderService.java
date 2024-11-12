@@ -15,6 +15,6 @@ public interface ProviderService {
     public Provider getProvider();
     public void getCodesetAndSave(String id, String version) throws IOException;
     public String getLatestVersion(String id) throws IOException;
-    public List<Code> getCodes(String id, String version) throws IOException;
+    public List<Code> getCodes(String id, String version, String match) throws IOException;
 
 }
