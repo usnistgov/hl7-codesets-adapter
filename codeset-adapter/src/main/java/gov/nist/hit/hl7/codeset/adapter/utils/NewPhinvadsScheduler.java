@@ -197,7 +197,7 @@ public class NewPhinvadsScheduler {
 
             codeset.setName(vs.getCode());
             codeset.setDescription(vs.getName());
-            codeset.setPhinvadsOid(vs.getOid());
+            codeset.setIdentifier(vs.getOid());
             VersionMetadata versionMetadata = new VersionMetadata(String.valueOf(vsvByVSOid.get(0).getVersionNumber()), vs.getStatusDate(), valueSetConcepts.size());
             codeset.setLatestVersion(versionMetadata);
             codeset.getVersions().add(versionMetadata);
@@ -206,8 +206,6 @@ public class NewPhinvadsScheduler {
             codeset.setCodeSetVersions(new HashSet<CodesetVersion>());
 
 
-            codeset.setHasPartCodes(false);
-            codesetVersion.setHasPartCodes(false);
             Set<String> codeSystemOids = new HashSet<>();
             Map<String, CodeSystem> uniqueIdCodeSystemMap = new HashMap<>();
             List<Code> codes = new ArrayList<Code>();

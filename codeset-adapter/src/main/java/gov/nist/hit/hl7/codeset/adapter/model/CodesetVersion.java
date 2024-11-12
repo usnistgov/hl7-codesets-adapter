@@ -35,7 +35,11 @@ public class CodesetVersion {
 
 
     private boolean deprecated;
-    private Boolean hasPartCodes;
+    private CodesStatus codesStatus;
+
+    public enum CodesStatus {
+        NOT_NEEDED, PENDING, SAVED
+    }
 
     public CodesetVersion() {
         super();
@@ -122,11 +126,11 @@ public class CodesetVersion {
         this.deprecated = deprecated;
     }
 
-    public Boolean getHasPartCodes() {
-        return hasPartCodes;
+    public CodesStatus getCodesStatus() {
+        return codesStatus;
     }
 
-    public void setHasPartCodes(Boolean hasPartCodes) {
-        this.hasPartCodes = hasPartCodes;
+    public void setCodesStatus(CodesStatus codesStatus) {
+        this.codesStatus = codesStatus;
     }
 }
