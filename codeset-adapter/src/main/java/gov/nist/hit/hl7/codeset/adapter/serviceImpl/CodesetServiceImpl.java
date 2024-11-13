@@ -3,10 +3,7 @@ package gov.nist.hit.hl7.codeset.adapter.serviceImpl;
 import gov.nist.hit.hl7.codeset.adapter.model.Code;
 import gov.nist.hit.hl7.codeset.adapter.model.Codeset;
 import gov.nist.hit.hl7.codeset.adapter.model.CodesetVersion;
-import gov.nist.hit.hl7.codeset.adapter.model.response.CodeResponse;
-import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetMetadataResponse;
-import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetResponse;
-import gov.nist.hit.hl7.codeset.adapter.model.response.ProvidersResponse;
+import gov.nist.hit.hl7.codeset.adapter.model.response.*;
 import gov.nist.hit.hl7.codeset.adapter.repository.CodesetRepository;
 import gov.nist.hit.hl7.codeset.adapter.repository.CodesetVersionRepository;
 import gov.nist.hit.hl7.codeset.adapter.model.request.CodesetSearchCriteria;
@@ -37,6 +34,7 @@ public class CodesetServiceImpl implements CodesetService {
 
     @Autowired
     private List<ProviderService> providerServices;
+
     public CodesetServiceImpl(CodesetRepository codesetRepository, CodesetVersionRepository codesetVersionRepository, MongoTemplate mongoTemplate, PhinvadsServiceImpl phinvadsService) {
         this.codesetRepository = codesetRepository;
         this.codesetVersionRepository = codesetVersionRepository;
@@ -76,36 +74,14 @@ public class CodesetServiceImpl implements CodesetService {
 
     @Override
     public CodesetMetadataResponse getCodesetMetadata(String provider, String id) throws IOException {
-        Criteria criteria = new Criteria().andOperator(
-                Criteria.where("provider").regex("^" + Pattern.quote(provider) + "$", "i"), // Adjust "someField" to the actual field for provider
-                Criteria.where("identifier").is(id)
-        );
-        // Define the aggregation with match and projection
-        MatchOperation matchOperation = Aggregation.match(criteria);
-        ProjectionOperation projectionOperation = Aggregation.project()
-                .and("name").as("name")
-                .and("latestVersion").as("latestStableVersion")
-                .and("versions").as("versions");
 
-        projectionOperation = projectionOperation.and("identifier").as("identifier");
+        ProviderService providerService = providerServices.stream()
+                .filter(p -> p.getProvider().getName().equals(provider.toLowerCase()))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider " + provider.toLowerCase() + " not found"));
 
-
-        Aggregation aggregation = Aggregation.newAggregation(
-                matchOperation,
-                projectionOperation
-        );
-
-        // Execute the aggregation and expect only one result
-        AggregationResults<CodesetMetadataResponse> results = mongoTemplate.aggregate(aggregation, "codeset", CodesetMetadataResponse.class);
-        List<CodesetMetadataResponse> resultList = results.getMappedResults();
-        if(resultList.isEmpty()){
-            throw new IOException("Codeset not found");
-        } else {
-            // Return the first result or null if no results
-            return resultList.get(0);
-        }
-
-
+        CodesetMetadataResponse codesetMetadataResponse = providerService.getCodesetMetadata(id);
+        return codesetMetadataResponse;
 
     }
 //    public List<Codeset> getCodesets(CodesetSearchCriteria criteria) throws IOException {
@@ -126,16 +102,25 @@ public class CodesetServiceImpl implements CodesetService {
 //        });
 //    }
 
+    @Override
+    public CodesetVersionMetadataResponse getCodesetVersionMetadata(String provider, String id, String version) throws IOException {
+        ProviderService providerService = providerServices.stream()
+                .filter(p -> p.getProvider().getName().equals(provider.toLowerCase()))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider " + provider.toLowerCase() + " not found"));
+        return providerService.getCodesetVersionMetadata(id, version);
+
+    }
 
     public CodesetResponse getCodeset(String provider, String id, CodesetSearchCriteria searchCriteria) throws IOException {
         ProviderService providerService = providerServices.stream()
                 .filter(p -> p.getProvider().getName().equals(provider.toLowerCase()))
                 .findFirst()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider "+ provider.toLowerCase() + " not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider " + provider.toLowerCase() + " not found"));
 
 
         String version = searchCriteria.getVersion();
-        if(version == null){
+        if (version == null) {
             version = providerService.getLatestVersion(id);
         }
 
@@ -186,14 +171,14 @@ public class CodesetServiceImpl implements CodesetService {
 
 
         CodesetResponse codesetResponse = finalResults.getUniqueMappedResult();
-        if(codesetResponse == null){
+        if (codesetResponse == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Codeset not found");
         }
 
         Codeset codeset = codesetRepository.findByIdentifier(id).orElse(null);
         CodesetVersion codesetVersion = codesetVersionRepository.findByCodesetIdAndVersion(codeset.getId(), version).orElse(null);
         List<Code> codes = new ArrayList<>();
-        if(codesetVersion.getCodesStatus().equals(CodesetVersion.CodesStatus.NOT_NEEDED)){
+        if (codesetVersion.getCodesStatus().equals(CodesetVersion.CodesStatus.NOT_NEEDED)) {
             // Codes are not stored in DB. Need to get them from web service
             codes = providerService.getCodes(id, version, searchCriteria.getMatch());
         } else {
@@ -203,7 +188,7 @@ public class CodesetServiceImpl implements CodesetService {
                 codeCriteria = codeCriteria.and("value").is(searchCriteria.getMatch());
             }
 
-           codes = mongoTemplate.find(Query.query(codeCriteria), Code.class);
+            codes = mongoTemplate.find(Query.query(codeCriteria), Code.class);
 
         }
         List<CodeResponse> codeResponses = codes.stream()

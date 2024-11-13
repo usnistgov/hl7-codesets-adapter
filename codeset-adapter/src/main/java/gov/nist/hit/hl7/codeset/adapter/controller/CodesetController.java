@@ -5,6 +5,7 @@ import gov.nist.hit.hl7.codeset.adapter.model.request.CodesetRequest;
 import gov.nist.hit.hl7.codeset.adapter.model.request.CodesetSearchCriteria;
 import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetMetadataResponse;
 import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetResponse;
+import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetVersionMetadataResponse;
 import gov.nist.hit.hl7.codeset.adapter.model.response.ProvidersResponse;
 import gov.nist.hit.hl7.codeset.adapter.serviceImpl.CodesetServiceImpl;
 import org.springframework.http.HttpStatus;
@@ -39,6 +40,11 @@ public class CodesetController {
     @GetMapping("/{provider}/codesets/{id}/metadata")
     public ResponseEntity<CodesetMetadataResponse> getCodesetMetadata(@PathVariable String provider,@PathVariable String id) throws IOException {
         CodesetMetadataResponse codeset = codesetService.getCodesetMetadata(provider, id);
+        return new ResponseEntity<>(codeset, HttpStatus.OK);
+    }
+    @GetMapping("/{provider}/codesets/{id}/versions/{version}/metadata")
+    public ResponseEntity<CodesetVersionMetadataResponse> getCodesetMetadata(@PathVariable String provider,@PathVariable String id,@PathVariable String version) throws IOException {
+        CodesetVersionMetadataResponse codeset = codesetService.getCodesetVersionMetadata(provider, id, version);
         return new ResponseEntity<>(codeset, HttpStatus.OK);
     }
 

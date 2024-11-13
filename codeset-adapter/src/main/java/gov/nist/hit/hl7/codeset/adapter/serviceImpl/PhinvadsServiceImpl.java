@@ -17,6 +17,7 @@ import gov.nist.hit.hl7.codeset.adapter.model.*;
 import gov.nist.hit.hl7.codeset.adapter.model.request.CodesetSearchCriteria;
 import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetMetadataResponse;
 import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetResponse;
+import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetVersionMetadataResponse;
 import gov.nist.hit.hl7.codeset.adapter.repository.CodesetRepository;
 import gov.nist.hit.hl7.codeset.adapter.repository.CodesetVersionRepository;
 import gov.nist.hit.hl7.codeset.adapter.service.ProviderService;
@@ -95,7 +96,7 @@ public class PhinvadsServiceImpl implements ProviderService {
 
     }
 
-//            @PostConstruct
+    @PostConstruct
     public void initPhinvads() throws IOException {
         System.out.println("************ INIT PHINVADS VALUESET METADATA");
         updateCodesets();
@@ -173,7 +174,7 @@ public class PhinvadsServiceImpl implements ProviderService {
                 .getValueSetConcepts();
 
 
-        VersionMetadata versionMetadata = new VersionMetadata(String.valueOf(valueSetVersion.getVersionNumber()), valueSetVersion.getStatusDate(), valueSetConcepts.size());
+        VersionMetadata versionMetadata = new VersionMetadata(String.valueOf(valueSetVersion.getVersionNumber()), valueSetVersion.getStatusDate());
         codeset.getVersions().add(versionMetadata);
         if (codeset.getLatestVersion() == null) {
             codeset.setLatestVersion(versionMetadata);
@@ -257,6 +258,17 @@ public class PhinvadsServiceImpl implements ProviderService {
         List<ValueSetVersion> valuesets = valuesetDto.getValueSetVersions();
         ValueSetVersion valuesetVersion = valuesets.stream().filter(v -> String.valueOf(v.getVersionNumber()).equals(version)).findFirst().orElse(null);
         return valuesetVersion;
+    }
+
+    public List<ValueSetVersion> getValuesetVersions(String id) throws IOException {
+        ValueSetVersionSearchCriteriaDto criteria = new ValueSetVersionSearchCriteriaDto();
+        criteria.setOidSearch(true);
+        criteria.setSearchText(id);
+        criteria.setSearchType(1);
+        criteria.setVersionOption(1);
+        ValueSetVersionResultDto valuesetDto = this.service.findValueSetVersions(criteria, 1, 1000);
+        List<ValueSetVersion> valuesetVersions = valuesetDto.getValueSetVersions();
+        return valuesetVersions;
     }
 
     public CodeSystem getCodeSystem(String codeSystemOid) {
@@ -364,7 +376,7 @@ public class PhinvadsServiceImpl implements ProviderService {
         Map<String, CodeSystem> uniqueIdCodeSystemMap = new HashMap<>();
         List<Code> codes = new ArrayList<Code>();
         for (ValueSetConcept pcode : valueSetConcepts) {
-            if(pcode.getValueSetVersionId().equals(valuesetVersion.getId())){
+            if (pcode.getValueSetVersionId().equals(valuesetVersion.getId())) {
                 if (uniqueIdCodeSystemMap.get(pcode.getCodeSystemOid()) == null) {
                     CodeSystem cs = getCodeSystem(pcode.getCodeSystemOid());
                     uniqueIdCodeSystemMap.put(pcode.getCodeSystemOid(), cs);
@@ -380,6 +392,47 @@ public class PhinvadsServiceImpl implements ProviderService {
 
         }
         return codes;
+    }
+
+    public CodesetMetadataResponse getCodesetMetadata(String id) throws IOException {
+        ValueSet valueset = getValueset(id);
+
+        List<ValueSetVersion> valuesetVersions = getValuesetVersions(id);
+        CodesetMetadataResponse codesetMetadataResponse = new CodesetMetadataResponse();
+        codesetMetadataResponse.setId(id);
+        codesetMetadataResponse.setName(valueset.getName());
+        List<VersionMetadata> versions = new ArrayList<VersionMetadata>();
+        VersionMetadata latestVersion = new VersionMetadata();
+        for (ValueSetVersion v : valuesetVersions) {
+
+            VersionMetadata versionMetadata = new VersionMetadata(String.valueOf(v.getVersionNumber()), v.getStatusDate());
+            versions.add(versionMetadata);
+            if (latestVersion.getVersion() == null || Integer.parseInt(latestVersion.getVersion()) < v.getVersionNumber()) {
+                latestVersion = versionMetadata;
+            }
+        }
+        codesetMetadataResponse.setVersions(versions);
+        codesetMetadataResponse.setLatestStableVersion(latestVersion);
+        return codesetMetadataResponse;
+    }
+
+    @Override
+    public CodesetVersionMetadataResponse getCodesetVersionMetadata(String id, String version) throws IOException {
+        ValueSet valueset = getValueset(id);
+
+        ValueSetVersion valuesetVersion = getValuesetVersion(id, version);
+        List<ValueSetConcept> valueSetConcepts = this.service
+                .getValueSetConceptsByValueSetVersionId(valuesetVersion.getId(), 1, Integer.MAX_VALUE)
+                .getValueSetConcepts();
+
+        CodesetVersionMetadataResponse codesetMetadataResponse = new CodesetVersionMetadataResponse();
+        codesetMetadataResponse.setId(id);
+        codesetMetadataResponse.setName(valueset.getName());
+        codesetMetadataResponse.setDate(valuesetVersion.getStatusDate());
+        codesetMetadataResponse.setVersion(String.valueOf(valuesetVersion.getVersionNumber()));
+        codesetMetadataResponse.setNumberOfCodes(valueSetConcepts.size());
+
+        return codesetMetadataResponse;
     }
 
 }

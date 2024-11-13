@@ -6,6 +6,7 @@ import gov.nist.hit.hl7.codeset.adapter.model.request.CodesetRequest;
 import gov.nist.hit.hl7.codeset.adapter.model.request.CodesetSearchCriteria;
 import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetMetadataResponse;
 import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetResponse;
+import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetVersionMetadataResponse;
 import gov.nist.hit.hl7.codeset.adapter.model.response.ProvidersResponse;
 
 import java.io.IOException;
@@ -16,6 +17,6 @@ public interface CodesetService {
     public List<CodesetMetadataResponse> getCodesets(String provider, CodesetSearchCriteria codesetSearchCriteria) throws IOException;
     public CodesetMetadataResponse getCodesetMetadata(String provider, String id) throws IOException;
     public CodesetResponse getCodeset(String provider, String id, CodesetSearchCriteria criteria) throws IOException;
-
+    public CodesetVersionMetadataResponse getCodesetVersionMetadata(String provider, String id, String version) throws IOException;
 
 }

@@ -198,7 +198,7 @@ public class NewPhinvadsScheduler {
             codeset.setName(vs.getCode());
             codeset.setDescription(vs.getName());
             codeset.setIdentifier(vs.getOid());
-            VersionMetadata versionMetadata = new VersionMetadata(String.valueOf(vsvByVSOid.get(0).getVersionNumber()), vs.getStatusDate(), valueSetConcepts.size());
+            VersionMetadata versionMetadata = new VersionMetadata(String.valueOf(vsvByVSOid.get(0).getVersionNumber()), vs.getStatusDate());
             codeset.setLatestVersion(versionMetadata);
             codeset.getVersions().add(versionMetadata);
             codeset.setProvider("phinvads");

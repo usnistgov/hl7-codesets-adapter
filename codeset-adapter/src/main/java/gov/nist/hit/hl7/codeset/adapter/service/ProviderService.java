@@ -6,6 +6,7 @@ import gov.nist.hit.hl7.codeset.adapter.model.Provider;
 import gov.nist.hit.hl7.codeset.adapter.model.request.CodesetSearchCriteria;
 import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetMetadataResponse;
 import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetResponse;
+import gov.nist.hit.hl7.codeset.adapter.model.response.CodesetVersionMetadataResponse;
 
 import java.io.IOException;
 import java.util.List;
@@ -16,5 +17,7 @@ public interface ProviderService {
     public void getCodesetAndSave(String id, String version) throws IOException;
     public String getLatestVersion(String id) throws IOException;
     public List<Code> getCodes(String id, String version, String match) throws IOException;
+    public CodesetMetadataResponse getCodesetMetadata(String id) throws IOException;
+    public CodesetVersionMetadataResponse getCodesetVersionMetadata(String id, String version) throws IOException;
 
 }
