@@ -1,5 +1,6 @@
 package gov.nist.hit.hl7.codeset.adapter.controller;
 
+import gov.nist.hit.hl7.codeset.adapter.exception.NotFoundException;
 import gov.nist.hit.hl7.codeset.adapter.model.Codeset;
 import gov.nist.hit.hl7.codeset.adapter.model.request.CodesetRequest;
 import gov.nist.hit.hl7.codeset.adapter.model.request.CodesetSearchCriteria;
@@ -38,18 +39,18 @@ public class CodesetController {
     }
 
     @GetMapping("/{provider}/codesets/{id}/metadata")
-    public ResponseEntity<CodesetMetadataResponse> getCodesetMetadata(@PathVariable String provider,@PathVariable String id) throws IOException {
+    public ResponseEntity<CodesetMetadataResponse> getCodesetMetadata(@PathVariable String provider,@PathVariable String id) throws IOException, NotFoundException {
         CodesetMetadataResponse codeset = codesetService.getCodesetMetadata(provider, id);
         return new ResponseEntity<>(codeset, HttpStatus.OK);
     }
     @GetMapping("/{provider}/codesets/{id}/versions/{version}/metadata")
-    public ResponseEntity<CodesetVersionMetadataResponse> getCodesetMetadata(@PathVariable String provider,@PathVariable String id,@PathVariable String version) throws IOException {
+    public ResponseEntity<CodesetVersionMetadataResponse> getCodesetMetadata(@PathVariable String provider,@PathVariable String id,@PathVariable String version) throws IOException, NotFoundException {
         CodesetVersionMetadataResponse codeset = codesetService.getCodesetVersionMetadata(provider, id, version);
         return new ResponseEntity<>(codeset, HttpStatus.OK);
     }
 
     @GetMapping("/{provider}/codesets/{id}")
-    public ResponseEntity<CodesetResponse> getCodeset(@PathVariable String provider,@PathVariable String id, @ModelAttribute CodesetSearchCriteria criteria) throws IOException {
+    public ResponseEntity<CodesetResponse> getCodeset(@PathVariable String provider,@PathVariable String id, @ModelAttribute CodesetSearchCriteria criteria) throws IOException, NotFoundException {
         CodesetResponse codeset = codesetService.getCodeset(provider, id, criteria);
         return new ResponseEntity<>(codeset, HttpStatus.OK);
     }

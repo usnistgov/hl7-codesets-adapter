@@ -1,5 +1,6 @@
 package gov.nist.hit.hl7.codeset.adapter.serviceImpl;
 
+import gov.nist.hit.hl7.codeset.adapter.exception.NotFoundException;
 import gov.nist.hit.hl7.codeset.adapter.model.Code;
 import gov.nist.hit.hl7.codeset.adapter.model.Codeset;
 import gov.nist.hit.hl7.codeset.adapter.model.CodesetVersion;
@@ -16,7 +17,6 @@ import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -73,7 +73,7 @@ public class CodesetServiceImpl implements CodesetService {
     }
 
     @Override
-    public CodesetMetadataResponse getCodesetMetadata(String provider, String id) throws IOException {
+    public CodesetMetadataResponse getCodesetMetadata(String provider, String id) throws IOException, NotFoundException {
 
         ProviderService providerService = providerServices.stream()
                 .filter(p -> p.getProvider().getName().equals(provider.toLowerCase()))
@@ -103,7 +103,7 @@ public class CodesetServiceImpl implements CodesetService {
 //    }
 
     @Override
-    public CodesetVersionMetadataResponse getCodesetVersionMetadata(String provider, String id, String version) throws IOException {
+    public CodesetVersionMetadataResponse getCodesetVersionMetadata(String provider, String id, String version) throws IOException, NotFoundException {
         ProviderService providerService = providerServices.stream()
                 .filter(p -> p.getProvider().getName().equals(provider.toLowerCase()))
                 .findFirst()
@@ -112,7 +112,7 @@ public class CodesetServiceImpl implements CodesetService {
 
     }
 
-    public CodesetResponse getCodeset(String provider, String id, CodesetSearchCriteria searchCriteria) throws IOException {
+    public CodesetResponse getCodeset(String provider, String id, CodesetSearchCriteria searchCriteria) throws IOException, NotFoundException {
         ProviderService providerService = providerServices.stream()
                 .filter(p -> p.getProvider().getName().equals(provider.toLowerCase()))
                 .findFirst()
@@ -172,7 +172,7 @@ public class CodesetServiceImpl implements CodesetService {
 
         CodesetResponse codesetResponse = finalResults.getUniqueMappedResult();
         if (codesetResponse == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Codeset not found");
+            throw new NotFoundException("Codeset not found");
         }
 
         Codeset codeset = codesetRepository.findByIdentifier(id).orElse(null);
