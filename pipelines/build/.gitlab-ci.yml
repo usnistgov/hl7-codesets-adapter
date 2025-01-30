@@ -16,6 +16,7 @@ generate_jar:
   script:
     - mvn -v
     - cd codeset-adapter
+    - chmod +x buildScript.sh
     - ./buildScript.sh
 
   artifacts:
