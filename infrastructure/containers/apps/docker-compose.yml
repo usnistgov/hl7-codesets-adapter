@@ -21,8 +21,9 @@ services:
     restart: unless-stopped
 
   codesets-adapter:
-    build: ./codesets-adapter
-    image: codesets-adapter
+    # build: ./codesets-adapter
+    # image: codesets-adapter
+    image: nist775hit/hl7-codeset-adapter-prod
     networks:
       - codesets-adapter-network
     expose:
@@ -34,15 +35,13 @@ services:
       - codesets-adapter-db
     env_file:
       - ./codesets-adapter-db/config/db.env
-      # - ./codesets-adapter/config/config.env
     links:
       - codesets-adapter-db:codesets-adapter-db
     volumes:
       - ../../data/codesets-adapter/logs/:/var/log/codesets-adapter/
     restart: unless-stopped
 
-
-
 networks:
   codesets-adapter-network:
+    name: codesets-adapter-network
 

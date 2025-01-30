@@ -1,0 +1,14 @@
+
+stages:
+  - deploy-prod
+deploy_prod:
+  stage: deploy-prod
+  script:
+    - echo "Deploying codeset adapter in hit dev"
+    - cd /sites/deployments_docker/hl7-codesets-adapter/infrastructure/containers/apps
+    - bash start.sh
+  tags:
+    - hitdev
+    - shell
+  when: manual
+  allow_failure: false 
