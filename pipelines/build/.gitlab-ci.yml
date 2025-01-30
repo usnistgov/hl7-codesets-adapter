@@ -16,6 +16,7 @@ generate_jar:
   script:
     - mvn -v
     - cd codeset-adapter
+    - mvn org.apache.maven.plugins:maven-install-plugin:3.1.3:install-file  -Dfile=external-dependencies/vocab-1.0.jar -DgroupId=gov.cdc -DartifactId=vocab -Dversion=1.0 -Dpackaging=jar
     - chmod +x buildScript.sh
     - ./buildScript.sh
 
