@@ -60,7 +60,9 @@ build_and_push_docker_image_prod:
     - docker push $DOCKER_IMAGE_PROD:latest
     - docker push $DOCKER_IMAGE_PROD:CI_COMMIT_BRANCH
 
-  dependencies:
-    - generate_jar
+  # dependencies:
+  #   - generate_jar
+  when: "manual"
+  allow_failure: false 
   # rules:
   #   - if: '$PROFILE == "prod"'
