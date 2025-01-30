@@ -22,7 +22,7 @@ generate_jar:
 
   artifacts:
     paths:
-      - codeset-adapter/target/codeset-adapter.jar
+      - target/codeset-adapter.jar
     expire_in: 1 hour
   when: "manual"
   allow_failure: false 
@@ -35,7 +35,7 @@ build_and_push_docker_image_dev:
   before_script:
     - echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
   script:
-    - cp codeset-adapter/target/codeset-adapter.jar .
+    - cp target/codeset-adapter.jar .
     - docker build -t "$DOCKER_IMAGE_DEV:latest" -t "$DOCKER_IMAGE_DEV:$CI_COMMIT_BRANCH"  .
     - docker push $DOCKER_IMAGE_DEV:latest
     - docker push $DOCKER_IMAGE_DEV:$CI_COMMIT_BRANCH
@@ -53,7 +53,7 @@ build_and_push_docker_image_prod:
   before_script:
     - echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
   script:
-    - cp codeset-adapter/target/codeset-adapter.jar .
+    - cp target/codeset-adapter.jar .
     - docker build -t "$DOCKER_IMAGE_PROD:latest" -t "$DOCKER_IMAGE_PROD:$CI_COMMIT_BRANCH" .
     - docker push $DOCKER_IMAGE_PROD:latest
     - docker push $DOCKER_IMAGE_PROD:CI_COMMIT_BRANCH
