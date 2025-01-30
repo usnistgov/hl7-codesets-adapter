@@ -1,1 +1,1 @@
-sudo mvn clean install -DskipTests
+mvn clean install -DskipTests
