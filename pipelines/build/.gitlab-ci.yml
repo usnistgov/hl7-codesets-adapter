@@ -62,5 +62,5 @@ build_and_push_docker_image_prod:
 
   dependencies:
     - generate_jar
-  rules:
-    - if: '$PROFILE == "prod"'
+  # rules:
+  #   - if: '$PROFILE == "prod"'
