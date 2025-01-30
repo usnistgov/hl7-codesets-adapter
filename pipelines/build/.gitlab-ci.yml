@@ -12,7 +12,7 @@ variables:
 
 generate_jar:
   stage: build
-  image: openjdk:21
+  image: eclipse-temurin:21-jdk-alpine
   script:
     - mvn -v
     - cd codeset-adapter
