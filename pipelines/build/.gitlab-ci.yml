@@ -51,8 +51,9 @@ build_and_push_docker_image_prod:
   stage: deploy
   image: docker:24.0.2
   services:
-    - docker:24.0.2-dind
-  command: ["--tls=false"]
+    - name: docker:24.0.2-dind
+      alias: docker
+      command: ["--tls=false"]
   before_script:
     - echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
     - cat /root/.docker/config.json
