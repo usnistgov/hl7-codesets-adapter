@@ -52,8 +52,10 @@ build_and_push_docker_image_prod:
   image: docker:24.0.2
   services:
     - docker:24.0.2-dind
+  command: ["--tls=false"]
   before_script:
     - echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
+    - cat /root/.docker/config.json
   script:
     - cp codeset-adapter/target/codeset-adapter.jar .
     - docker build -t "$DOCKER_IMAGE_PROD:latest" -t "$DOCKER_IMAGE_PROD:$CI_COMMIT_BRANCH" .
