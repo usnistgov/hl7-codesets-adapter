@@ -1,12 +1,10 @@
 version: "3.3"
 services:
   codesets-adapter-db:
-    build: ./codesets-adapter-db
-    image: codesets-adapter-db
+    image: mongo:4.4.29-focal
     networks:
       - codesets-adapter-network
     container_name: codesets-adapter-db
-    hostname: codesets-adapter-db
     expose:
       - "27017"
     healthcheck:
