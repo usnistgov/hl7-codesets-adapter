@@ -1,13 +1,13 @@
 
 stages:
   - deploy-prod
-  
+
 deploy_prod:
   stage: deploy-prod
   script:
     - echo "Deploying codeset adapter in hit dev"
     - cd /sites/apps/hl7-codesets-adapter
-    - git pull 
+    # - git pull 
     - cd infrastructure/containers/apps
     - bash start.sh
   tags:
