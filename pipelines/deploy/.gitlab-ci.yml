@@ -2,6 +2,13 @@
 stages:
   - deploy-prod
 
+variables:
+  DOCKER_IMAGE_PROD: "nist775hit/hl7-codeset-adapter-prod"
+  DOCKER_IMAGE_DEV: "nist775hit/hl7-codeset-adapter-dev"  
+  DOCKER_DRIVER: overlay2
+  DOCKER_HOST: tcp://docker:2375  # Ensure Docker commands connect to the DinD service
+  DOCKER_TLS_CERTDIR: ""          # Disable TLS for Docker-in-Docker
+
 deploy_prod:
   stage: deploy-prod
   script:
