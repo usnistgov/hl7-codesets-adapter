@@ -100,7 +100,12 @@ public class PhinvadsServiceImpl implements ProviderService {
     @PostConstruct
     public void initPhinvads() throws IOException {
         System.out.println("************ INIT PHINVADS VALUESET METADATA");
-        updateCodesets();
+        try {
+            updateCodesets();
+        } catch (Exception e) {
+            System.out.println("************ Error loading PHINVADS Service");
+//            throw new RuntimeException(e);
+        }
     }
 
     // Every 1:00 AM Saturday

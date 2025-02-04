@@ -16,7 +16,7 @@ public class GlobalExceptionHandler {
     public ErrorResponse handleException(Exception ex) {
         // You can add more logic here to customize the response based on the exception type
         ex.printStackTrace();
-        return  new ErrorResponse("Error");
+        return  new ErrorResponse("Error: " + ex.getMessage());
 //        return new ResponseEntity<>("An error occurred: " + ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
