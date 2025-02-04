@@ -1,9 +1,7 @@
 version: "3.3"
 services:
   codesets-adapter-db:
-    # image: mongo:4.4.29-focal
-    build: ./codesets-adapter-db
-    image: codesets-adapter-db
+    image: mongo:4.4.29-focal
     networks:
       - codesets-adapter-network
     container_name: codesets-adapter-db
