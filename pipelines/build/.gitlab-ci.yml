@@ -59,6 +59,7 @@ build_and_push_docker_image_prod:
     - cat /root/.docker/config.json
   script:
     - cp codeset-adapter/target/codeset-adapter.jar .
+    - cp codeset-adapter/Dockerfile .
     - docker build -t "$DOCKER_IMAGE_PROD:latest" -t "$DOCKER_IMAGE_PROD:$CI_COMMIT_BRANCH" .
     - docker push $DOCKER_IMAGE_PROD:latest
     - docker push $DOCKER_IMAGE_PROD:CI_COMMIT_BRANCH
