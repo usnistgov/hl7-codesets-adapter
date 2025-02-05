@@ -226,14 +226,20 @@ public class PhinvadsServiceImpl implements ProviderService {
 
     @Override
     public String getLatestVersion(String id) throws IOException {
-        ValueSetVersionSearchCriteriaDto criteria = new ValueSetVersionSearchCriteriaDto();
-        criteria.setOidSearch(true);
-        criteria.setSearchText(id);
-        criteria.setSearchType(1);
-        criteria.setVersionOption(3);
-        ValueSetVersionResultDto valuesetVersionDto = this.service.findValueSetVersions(criteria, 1, Integer.MAX_VALUE);
-        ValueSetVersion valuesetVersion = valuesetVersionDto.getValueSetVersions().stream().filter(v -> v.getValueSetOid().equals(id)).findFirst().orElse(null);
-        return (valuesetVersion != null) ? String.valueOf(valuesetVersion.getVersionNumber()) : null;
+        try {
+            ValueSetVersionSearchCriteriaDto criteria = new ValueSetVersionSearchCriteriaDto();
+            criteria.setOidSearch(true);
+            criteria.setSearchText(id);
+            criteria.setSearchType(1);
+            criteria.setVersionOption(3);
+            ValueSetVersionResultDto valuesetVersionDto = this.service.findValueSetVersions(criteria, 1, Integer.MAX_VALUE);
+            ValueSetVersion valuesetVersion = valuesetVersionDto.getValueSetVersions().stream().filter(v -> v.getValueSetOid().equals(id)).findFirst().orElse(null);
+            return (valuesetVersion != null) ? String.valueOf(valuesetVersion.getVersionNumber()) : null;
+        } catch (Exception e) {
+            System.out.println("************ Error loading PHINVADS Service: " + e.getMessage());
+            return null;
+        }
+
     }
 
     @Override
@@ -247,12 +253,18 @@ public class PhinvadsServiceImpl implements ProviderService {
     }
 
     public ValueSet getValueset(String id)  {
-        ValueSetSearchCriteriaDto criteria = new ValueSetSearchCriteriaDto();
-        criteria.setOidSearch(true);
-        criteria.setSearchText(id);
-        criteria.setSearchType(1);
-        ValueSetResultDto valuesetDto = this.service.findValueSets(criteria, 1, 1);
-        return valuesetDto.getValueSet();
+        try {
+            ValueSetSearchCriteriaDto criteria = new ValueSetSearchCriteriaDto();
+            criteria.setOidSearch(true);
+            criteria.setSearchText(id);
+            criteria.setSearchType(1);
+            ValueSetResultDto valuesetDto = this.service.findValueSets(criteria, 1, 1);
+            return valuesetDto.getValueSet();
+        } catch (Exception e) {
+            System.out.println("************ Error loading PHINVADS Service: " + e.getMessage());
+            return null;
+        }
+
     }
 
     public ValueSetVersion getValuesetVersion(String id, String version) {
@@ -294,59 +306,64 @@ public class PhinvadsServiceImpl implements ProviderService {
 
     @Override
     public void getCodesetAndSave(String id, String version) throws IOException {
-        ValueSet valueset = getValueset(id);
-        if (valueset == null) {
-            return;
-        }
-
-        ValueSetVersion valuesetVersion = getValuesetVersion(id, version);
-        if (valuesetVersion == null) {
-            return;
-        }
-
-        Codeset codeset = codesetRepository.findByIdentifier(id).orElse(null);
-        if (codeset == null) {
-            codeset = new Codeset();
-            codeset.setIdentifier(id);
-            codeset.setVersions(new ArrayList<VersionMetadata>());
-            codeset.setName(valueset.getCode());
-            codeset.setDescription(valueset.getName());
-            codeset.setProvider("phinvads");
-            codeset.setDateUpdated(valueset.getStatusDate());
-            codeset.setCodeSetVersions(new HashSet<CodesetVersion>());
-            codeset = mongoOps.save(codeset);
-        }
-        CodesetVersion codesetVersion = codesetVersionRepository.findByCodesetIdAndVersion(codeset.getId(), version).orElse(null);
-        if (codesetVersion == null) {
-            codesetVersion = createNewCodesetVersion(codeset, valuesetVersion, true);
-            mongoOps.save(codeset);
-        } else {
-            if (codesetVersion.getCodesStatus() == null || codesetVersion.getCodesStatus().equals(CodesetVersion.CodesStatus.PENDING)) {
-                List<ValueSetConcept> valueSetConcepts = this.service
-                        .getValueSetConceptsByValueSetVersionId(valuesetVersion.getId(), 1, Integer.MAX_VALUE)
-                        .getValueSetConcepts();
-                // Get code systems and save all codes
-                Set<String> codeSystemOids = new HashSet<>();
-                Map<String, CodeSystem> uniqueIdCodeSystemMap = new HashMap<>();
-                List<Code> codes = new ArrayList<Code>();
-                for (ValueSetConcept pcode : valueSetConcepts) {
-                    if (uniqueIdCodeSystemMap.get(pcode.getCodeSystemOid()) == null) {
-                        CodeSystem cs = getCodeSystem(pcode.getCodeSystemOid());
-                        uniqueIdCodeSystemMap.put(pcode.getCodeSystemOid(), cs);
-                    }
-                    Code code = new Code();
-                    code.setValue(pcode.getConceptCode());
-                    code.setDescription(pcode.getCodeSystemConceptName());
-                    code.setComments(pcode.getDefinitionText());
-//                    code.setUsage("R");
-                    code.setCodeSystem(uniqueIdCodeSystemMap.get(pcode.getCodeSystemOid()).getHl70396Identifier());
-                    code.setCodesetversionId(codesetVersion.getId());
-                    codes.add(code);
-                    codesetVersion.setCodesStatus(CodesetVersion.CodesStatus.SAVED);
-                }
-                mongoOps.insertAll(codes);
-                mongoOps.save(codesetVersion);
+        try {
+            ValueSet valueset = getValueset(id);
+            if (valueset == null) {
+                return;
             }
+
+            ValueSetVersion valuesetVersion = getValuesetVersion(id, version);
+            if (valuesetVersion == null) {
+                return;
+            }
+
+            Codeset codeset = codesetRepository.findByIdentifier(id).orElse(null);
+            if (codeset == null) {
+                codeset = new Codeset();
+                codeset.setIdentifier(id);
+                codeset.setVersions(new ArrayList<VersionMetadata>());
+                codeset.setName(valueset.getCode());
+                codeset.setDescription(valueset.getName());
+                codeset.setProvider("phinvads");
+                codeset.setDateUpdated(valueset.getStatusDate());
+                codeset.setCodeSetVersions(new HashSet<CodesetVersion>());
+                codeset = mongoOps.save(codeset);
+            }
+            CodesetVersion codesetVersion = codesetVersionRepository.findByCodesetIdAndVersion(codeset.getId(), version).orElse(null);
+            if (codesetVersion == null) {
+                codesetVersion = createNewCodesetVersion(codeset, valuesetVersion, true);
+                mongoOps.save(codeset);
+            } else {
+                if (codesetVersion.getCodesStatus() == null || codesetVersion.getCodesStatus().equals(CodesetVersion.CodesStatus.PENDING)) {
+                    List<ValueSetConcept> valueSetConcepts = this.service
+                            .getValueSetConceptsByValueSetVersionId(valuesetVersion.getId(), 1, Integer.MAX_VALUE)
+                            .getValueSetConcepts();
+                    // Get code systems and save all codes
+                    Set<String> codeSystemOids = new HashSet<>();
+                    Map<String, CodeSystem> uniqueIdCodeSystemMap = new HashMap<>();
+                    List<Code> codes = new ArrayList<Code>();
+                    for (ValueSetConcept pcode : valueSetConcepts) {
+                        if (uniqueIdCodeSystemMap.get(pcode.getCodeSystemOid()) == null) {
+                            CodeSystem cs = getCodeSystem(pcode.getCodeSystemOid());
+                            uniqueIdCodeSystemMap.put(pcode.getCodeSystemOid(), cs);
+                        }
+                        Code code = new Code();
+                        code.setValue(pcode.getConceptCode());
+                        code.setDescription(pcode.getCodeSystemConceptName());
+                        code.setComments(pcode.getDefinitionText());
+//                    code.setUsage("R");
+                        code.setCodeSystem(uniqueIdCodeSystemMap.get(pcode.getCodeSystemOid()).getHl70396Identifier());
+                        code.setCodesetversionId(codesetVersion.getId());
+                        codes.add(code);
+                        codesetVersion.setCodesStatus(CodesetVersion.CodesStatus.SAVED);
+                    }
+                    mongoOps.insertAll(codes);
+                    mongoOps.save(codesetVersion);
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("************ Error loading PHINVADS Service: " + e.getMessage());
+//            throw new RuntimeException(e);
         }
 
     }
@@ -400,12 +417,11 @@ public class PhinvadsServiceImpl implements ProviderService {
         return codes;
     }
 
-    public CodesetMetadataResponse getCodesetMetadata(String id) throws NotFoundException {
+    public CodesetMetadataResponse getCodesetMetadata(String id) throws NotFoundException, IOException {
         ValueSet valueset = getValueset(id);
         if(valueset == null){
-            throw new NotFoundException("Codeset not found");
+            throw new IOException("Error while retrieving data from Phinvads web service");
         }
-
         List<ValueSetVersion> valuesetVersions = getValuesetVersions(id);
         CodesetMetadataResponse codesetMetadataResponse = new CodesetMetadataResponse();
         codesetMetadataResponse.setId(id);
@@ -418,8 +434,6 @@ public class PhinvadsServiceImpl implements ProviderService {
                 if (latestVersion.getVersion() == null || Integer.parseInt(latestVersion.getVersion()) < v.getVersionNumber()) {
                     latestVersion = versionMetadata;
                 }
-
-
         }
         codesetMetadataResponse.setVersions(versions);
         codesetMetadataResponse.setLatestStableVersion(latestVersion);
@@ -430,11 +444,11 @@ public class PhinvadsServiceImpl implements ProviderService {
     public CodesetVersionMetadataResponse getCodesetVersionMetadata(String id, String version) throws NotFoundException {
         ValueSet valueset = getValueset(id);
         if(valueset == null){
-            throw new NotFoundException("Codeset not found");
+            throw new NotFoundException("Error while retrieving code set data from Phinvads web service");
         }
         ValueSetVersion valuesetVersion = getValuesetVersion(id, version);
         if(valueset == null){
-            throw new NotFoundException("Codeset version not found");
+            throw new NotFoundException("Error while retrieving code set version from Phinvads web service");
         }
         List<ValueSetConcept> valueSetConcepts = this.service
                 .getValueSetConceptsByValueSetVersionId(valuesetVersion.getId(), 1, Integer.MAX_VALUE)

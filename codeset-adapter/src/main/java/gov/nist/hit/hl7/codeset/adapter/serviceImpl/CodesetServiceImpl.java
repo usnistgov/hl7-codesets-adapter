@@ -74,7 +74,6 @@ public class CodesetServiceImpl implements CodesetService {
 
     @Override
     public CodesetMetadataResponse getCodesetMetadata(String provider, String id) throws IOException, NotFoundException {
-
         ProviderService providerService = providerServices.stream()
                 .filter(p -> p.getProvider().getName().equals(provider.toLowerCase()))
                 .findFirst()
@@ -122,6 +121,9 @@ public class CodesetServiceImpl implements CodesetService {
         String version = searchCriteria.getVersion();
         if (version == null) {
             version = providerService.getLatestVersion(id);
+        }
+        if(version == null) {
+            throw new IOException("Error while retrieving latest version from Phinvads web service");
         }
 
         providerService.getCodesetAndSave(id, version);
