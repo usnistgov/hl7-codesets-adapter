@@ -78,9 +78,26 @@ public class CodesetServiceImpl implements CodesetService {
                 .filter(p -> p.getProvider().getName().equals(provider.toLowerCase()))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider " + provider.toLowerCase() + " not found"));
+        try {
+            CodesetMetadataResponse codesetMetadataResponse = providerService.getCodesetMetadata(id);
+            return codesetMetadataResponse;
 
-        CodesetMetadataResponse codesetMetadataResponse = providerService.getCodesetMetadata(id);
-        return codesetMetadataResponse;
+        } catch (Exception e) {
+            MatchOperation matchOperation = Aggregation.match(Criteria.where("provider").regex("^" + Pattern.quote(provider) + "$", "i").and(String.valueOf(Criteria.where("identifier").is(id)))
+            );
+
+            ProjectionOperation projectionOperation = Aggregation.project()
+                    .and("name").as("name")
+                    .and("versions").as("versions")
+                    .and("latestVersion").as("latestStableVersion");
+
+            projectionOperation = projectionOperation.and("identifier").as("identifier");
+
+
+            // Execute the aggregation
+            Aggregation aggregation = Aggregation.newAggregation(matchOperation, projectionOperation);
+            AggregationResults<CodesetMetadataResponse> results = mongoTemplate.aggregate(aggregation, "codeset", CodesetMetadataResponse.class);
+        }
 
     }
 //    public List<Codeset> getCodesets(CodesetSearchCriteria criteria) throws IOException {
