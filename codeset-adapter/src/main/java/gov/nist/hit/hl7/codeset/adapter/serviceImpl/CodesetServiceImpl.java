@@ -83,7 +83,7 @@ public class CodesetServiceImpl implements CodesetService {
             return codesetMetadataResponse;
 
         } catch (Exception e) {
-            MatchOperation matchOperation = Aggregation.match(Criteria.where("provider").regex("^" + Pattern.quote(provider) + "$", "i").and(String.valueOf(Criteria.where("identifier").is(id)))
+            MatchOperation matchOperation = Aggregation.match(Criteria.where("provider").regex("^" + Pattern.quote(provider) + "$", "i").and("identifier").is(id)
             );
 
             ProjectionOperation projectionOperation = Aggregation.project()
@@ -97,6 +97,11 @@ public class CodesetServiceImpl implements CodesetService {
             // Execute the aggregation
             Aggregation aggregation = Aggregation.newAggregation(matchOperation, projectionOperation);
             AggregationResults<CodesetMetadataResponse> results = mongoTemplate.aggregate(aggregation, "codeset", CodesetMetadataResponse.class);
+            CodesetMetadataResponse fallback = results.getUniqueMappedResult();
+            if (fallback == null) {
+                throw new NotFoundException("Codeset " + id + " not found for provider " + provider);
+            }
+            return fallback;
         }
 
     }
@@ -209,6 +214,9 @@ public class CodesetServiceImpl implements CodesetService {
 
             codes = mongoTemplate.find(Query.query(codeCriteria), Code.class);
 
+            if (codes.isEmpty()) {
+                codes = providerService.getCodes(id, version, searchCriteria.getMatch());
+            }
         }
         List<CodeResponse> codeResponses = codes.stream()
                 .map(code -> new CodeResponse(code))

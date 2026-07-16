@@ -48,6 +48,8 @@ public class PhinvadsServiceImpl implements ProviderService {
     private static final Logger log = LoggerFactory.getLogger(PhinvadsServiceImpl.class);
     @Autowired
     MongoOperations mongoOps;
+    @Autowired(required = false)
+    private PhinvadsFallbackService fallbackService;
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
     private final CodesetRepository codesetRepository;
 
@@ -95,6 +97,10 @@ public class PhinvadsServiceImpl implements ProviderService {
             e.printStackTrace();
         }
 
+    }
+
+    public VocabService getService() {
+        return this.service;
     }
 
     @PostConstruct
@@ -236,7 +242,25 @@ public class PhinvadsServiceImpl implements ProviderService {
             ValueSetVersion valuesetVersion = valuesetVersionDto.getValueSetVersions().stream().filter(v -> v.getValueSetOid().equals(id)).findFirst().orElse(null);
             return (valuesetVersion != null) ? String.valueOf(valuesetVersion.getVersionNumber()) : null;
         } catch (Exception e) {
-            System.out.println("************ Error loading PHINVADS Service: " + e.getMessage());
+            log.warn("PHINVADS unreachable for getLatestVersion({}), trying fallbacks: {}", id, e.getMessage());
+
+            // Fallback 1: Check MongoDB for latest version from cached metadata
+            Codeset codeset = codesetRepository.findByIdentifier(id).orElse(null);
+            if (codeset != null && codeset.getLatestVersion() != null) {
+                log.info("Using cached latest version from MongoDB: {} v{}", id, codeset.getLatestVersion().getVersion());
+                return codeset.getLatestVersion().getVersion();
+            }
+
+            // Fallback 2: Check exported files on disk
+            if (fallbackService != null) {
+                String fileVersion = fallbackService.findLatestExportedVersion(id);
+                if (fileVersion != null) {
+                    log.info("Using latest exported version from disk: {} v{}", id, fileVersion);
+                    return fileVersion;
+                }
+            }
+
+            log.error("No version found for {} from any source", id);
             return null;
         }
 
@@ -370,51 +394,66 @@ public class PhinvadsServiceImpl implements ProviderService {
 
     @Override
     public List<Code> getCodes(String id, String version, String match) throws IOException {
-        ValueSetVersion valuesetVersion = getValuesetVersion(id, version);
-        if (valuesetVersion == null) {
-            return new ArrayList<>();
-        }
-//        List<ValueSetConcept> valueSetConcepts = this.service
-//                .getValueSetConceptsByValueSetVersionId(valuesetVersion.getId(), 1, Integer.MAX_VALUE)
-//                .getValueSetConcepts();
-        List<ValueSetConcept> valueSetConcepts = new ArrayList<>();
-        if (match != null) {
-            ValueSetConceptSearchCriteriaDto valueSetConceptSearchCriteriaDto = new ValueSetConceptSearchCriteriaDto();
-            valueSetConceptSearchCriteriaDto.setSearchText(match);
-            valueSetConceptSearchCriteriaDto.setSearchType(1);
-            valueSetConceptSearchCriteriaDto.setVersionOption(3);
-            valueSetConceptSearchCriteriaDto.setFilterByValueSets(true);
-            valueSetConceptSearchCriteriaDto.setValueSetOids(Arrays.asList(id));
-            valueSetConceptSearchCriteriaDto.setConceptCodeSearch(true);
-            ValueSetConceptResultDto valueSetConceptResultDto = this.service.findValueSetConcepts(valueSetConceptSearchCriteriaDto, 1, Integer.MAX_VALUE);
-            valueSetConcepts = valueSetConceptResultDto.getValueSetConcepts();
-        } else {
-            valueSetConcepts = this.service
-                    .getValueSetConceptsByValueSetVersionId(valuesetVersion.getId(), 1, Integer.MAX_VALUE)
-                    .getValueSetConcepts();
-        }
-
-        // Get code systems and save all codes
-        Set<String> codeSystemOids = new HashSet<>();
-        Map<String, CodeSystem> uniqueIdCodeSystemMap = new HashMap<>();
-        List<Code> codes = new ArrayList<Code>();
-        for (ValueSetConcept pcode : valueSetConcepts) {
-            if (pcode.getValueSetVersionId().equals(valuesetVersion.getId())) {
-                if (uniqueIdCodeSystemMap.get(pcode.getCodeSystemOid()) == null) {
-                    CodeSystem cs = getCodeSystem(pcode.getCodeSystemOid());
-                    uniqueIdCodeSystemMap.put(pcode.getCodeSystemOid(), cs);
-                }
-                Code code = new Code();
-                code.setValue(pcode.getConceptCode());
-                code.setDescription(pcode.getCodeSystemConceptName());
-                code.setComments(pcode.getDefinitionText());
-//                code.setUsage("R");
-                code.setCodeSystem(uniqueIdCodeSystemMap.get(pcode.getCodeSystemOid()).getHl70396Identifier());
-                codes.add(code);
+        try {
+            ValueSetVersion valuesetVersion = getValuesetVersion(id, version);
+            if (valuesetVersion == null) {
+                // PHINVADS responded but has no such version, not an outage, so don't serve local data
+                log.warn("PHINVADS has no version {} for codeset {}; returning no codes", version, id);
+                return new ArrayList<>();
             }
 
+            List<ValueSetConcept> valueSetConcepts = new ArrayList<>();
+            if (match != null) {
+                ValueSetConceptSearchCriteriaDto valueSetConceptSearchCriteriaDto = new ValueSetConceptSearchCriteriaDto();
+                valueSetConceptSearchCriteriaDto.setSearchText(match);
+                valueSetConceptSearchCriteriaDto.setSearchType(1);
+                valueSetConceptSearchCriteriaDto.setVersionOption(3);
+                valueSetConceptSearchCriteriaDto.setFilterByValueSets(true);
+                valueSetConceptSearchCriteriaDto.setValueSetOids(Arrays.asList(id));
+                valueSetConceptSearchCriteriaDto.setConceptCodeSearch(true);
+                ValueSetConceptResultDto valueSetConceptResultDto = this.service.findValueSetConcepts(valueSetConceptSearchCriteriaDto, 1, Integer.MAX_VALUE);
+                valueSetConcepts = valueSetConceptResultDto.getValueSetConcepts();
+            } else {
+                valueSetConcepts = this.service
+                        .getValueSetConceptsByValueSetVersionId(valuesetVersion.getId(), 1, Integer.MAX_VALUE)
+                        .getValueSetConcepts();
+            }
+
+            // Get code systems and save all codes
+            Set<String> codeSystemOids = new HashSet<>();
+            Map<String, CodeSystem> uniqueIdCodeSystemMap = new HashMap<>();
+            List<Code> codes = new ArrayList<Code>();
+            for (ValueSetConcept pcode : valueSetConcepts) {
+                if (pcode.getValueSetVersionId().equals(valuesetVersion.getId())) {
+                    if (uniqueIdCodeSystemMap.get(pcode.getCodeSystemOid()) == null) {
+                        CodeSystem cs = getCodeSystem(pcode.getCodeSystemOid());
+                        uniqueIdCodeSystemMap.put(pcode.getCodeSystemOid(), cs);
+                    }
+                    Code code = new Code();
+                    code.setValue(pcode.getConceptCode());
+                    code.setDescription(pcode.getCodeSystemConceptName());
+                    code.setComments(pcode.getDefinitionText());
+//                    code.setUsage("R");
+                    code.setCodeSystem(uniqueIdCodeSystemMap.get(pcode.getCodeSystemOid()).getHl70396Identifier());
+                    codes.add(code);
+                }
+
+            }
+            return codes;
+        } catch (Exception e) {
+            log.warn("PHINVADS call failed for getCodes({}, {}), trying fallback: {}", id, version, e.getMessage());
+            return getCodesFromFallback(id, version, match);
         }
-        return codes;
+    }
+
+
+    private List<Code> getCodesFromFallback(String id, String version, String match) throws IOException {
+        if (fallbackService != null && fallbackService.hasFallbackData(id, version)) {
+            log.info("Serving codes from local fallback files for {} v{}", id, version);
+            return fallbackService.readCodes(id, version, match);
+        }
+        log.error("No fallback data available for {} v{}", id, version);
+        return new ArrayList<>();
     }
 
     public CodesetMetadataResponse getCodesetMetadata(String id) throws NotFoundException, IOException {
